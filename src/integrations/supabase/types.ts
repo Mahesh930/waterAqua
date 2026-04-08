@@ -14,16 +14,218 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      feedback: {
+        Row: {
+          comment: string | null
+          created_at: string
+          customer_id: string
+          id: string
+          order_id: string
+          rating: number
+          supplier_id: string
+        }
+        Insert: {
+          comment?: string | null
+          created_at?: string
+          customer_id: string
+          id?: string
+          order_id: string
+          rating: number
+          supplier_id: string
+        }
+        Update: {
+          comment?: string | null
+          created_at?: string
+          customer_id?: string
+          id?: string
+          order_id?: string
+          rating?: number
+          supplier_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "feedback_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "feedback_supplier_id_fkey"
+            columns: ["supplier_id"]
+            isOneToOne: false
+            referencedRelation: "suppliers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      orders: {
+        Row: {
+          created_at: string
+          customer_id: string
+          delivery_address: string | null
+          delivery_time: string | null
+          id: string
+          quantity: number
+          status: Database["public"]["Enums"]["order_status"]
+          supplier_id: string
+          total_amount: number
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          customer_id: string
+          delivery_address?: string | null
+          delivery_time?: string | null
+          id?: string
+          quantity: number
+          status?: Database["public"]["Enums"]["order_status"]
+          supplier_id: string
+          total_amount: number
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          customer_id?: string
+          delivery_address?: string | null
+          delivery_time?: string | null
+          id?: string
+          quantity?: number
+          status?: Database["public"]["Enums"]["order_status"]
+          supplier_id?: string
+          total_amount?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "orders_supplier_id_fkey"
+            columns: ["supplier_id"]
+            isOneToOne: false
+            referencedRelation: "suppliers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      profiles: {
+        Row: {
+          avatar_url: string | null
+          created_at: string
+          full_name: string | null
+          id: string
+          phone: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          avatar_url?: string | null
+          created_at?: string
+          full_name?: string | null
+          id?: string
+          phone?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          avatar_url?: string | null
+          created_at?: string
+          full_name?: string | null
+          id?: string
+          phone?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      suppliers: {
+        Row: {
+          area: string
+          available: boolean
+          business_name: string
+          created_at: string
+          delivery_time: string
+          id: string
+          min_order: number
+          price_per_can: number
+          rating: number
+          review_count: number
+          stock: number
+          updated_at: string
+          user_id: string
+          water_type: string
+        }
+        Insert: {
+          area: string
+          available?: boolean
+          business_name: string
+          created_at?: string
+          delivery_time?: string
+          id?: string
+          min_order?: number
+          price_per_can?: number
+          rating?: number
+          review_count?: number
+          stock?: number
+          updated_at?: string
+          user_id: string
+          water_type?: string
+        }
+        Update: {
+          area?: string
+          available?: boolean
+          business_name?: string
+          created_at?: string
+          delivery_time?: string
+          id?: string
+          min_order?: number
+          price_per_can?: number
+          rating?: number
+          review_count?: number
+          stock?: number
+          updated_at?: string
+          user_id?: string
+          water_type?: string
+        }
+        Relationships: []
+      }
+      user_roles: {
+        Row: {
+          id: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Insert: {
+          id?: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Update: {
+          id?: string
+          role?: Database["public"]["Enums"]["app_role"]
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      has_role: {
+        Args: {
+          _role: Database["public"]["Enums"]["app_role"]
+          _user_id: string
+        }
+        Returns: boolean
+      }
     }
     Enums: {
-      [_ in never]: never
+      app_role: "customer" | "supplier" | "admin"
+      order_status:
+        | "placed"
+        | "confirmed"
+        | "out_for_delivery"
+        | "delivered"
+        | "cancelled"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -150,6 +352,15 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      app_role: ["customer", "supplier", "admin"],
+      order_status: [
+        "placed",
+        "confirmed",
+        "out_for_delivery",
+        "delivered",
+        "cancelled",
+      ],
+    },
   },
 } as const

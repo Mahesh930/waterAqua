@@ -5,21 +5,44 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
+import { supabase } from "@/integrations/supabase/client";
 
 export default function Login() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPw, setShowPw] = useState(false);
-  const [role, setRole] = useState<"customer" | "supplier" | "admin">("customer");
+  const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
   const { toast } = useToast();
 
-  const handleLogin = (e: React.FormEvent) => {
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
+    setLoading(true);
+
+    const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+
+    if (error) {
+      toast({ title: "Login failed", description: error.message, variant: "destructive" });
+      setLoading(false);
+      return;
+    }
+
+    // Fetch role to redirect
+    const { data: roleData } = await supabase
+      .from("user_roles")
+      .select("role")
+      .eq("user_id", data.user.id)
+      .limit(1)
+      .single();
+
+    const role = roleData?.role || "customer";
     toast({ title: "Welcome back!", description: `Logged in as ${role}` });
+
     if (role === "customer") navigate("/customer");
     else if (role === "supplier") navigate("/supplier");
     else navigate("/admin");
+
+    setLoading(false);
   };
 
   return (
@@ -40,15 +63,6 @@ export default function Login() {
           <h2 className="font-heading text-2xl font-bold mb-1">Log In</h2>
           <p className="text-muted-foreground text-sm mb-6">Enter your credentials to access your account.</p>
 
-          <div className="flex gap-1 p-1 bg-muted rounded-lg mb-6">
-            {(["customer", "supplier", "admin"] as const).map(r => (
-              <button key={r} onClick={() => setRole(r)}
-                className={`flex-1 text-sm py-2 rounded-md font-medium capitalize transition-colors ${role === r ? "bg-card text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"}`}>
-                {r}
-              </button>
-            ))}
-          </div>
-
           <form onSubmit={handleLogin} className="space-y-4">
             <div>
               <Label htmlFor="email">Email</Label>
@@ -67,7 +81,9 @@ export default function Login() {
                 </button>
               </div>
             </div>
-            <Button type="submit" className="w-full">Log In</Button>
+            <Button type="submit" className="w-full" disabled={loading}>
+              {loading ? "Logging in..." : "Log In"}
+            </Button>
           </form>
 
           <p className="text-center text-sm text-muted-foreground mt-6">

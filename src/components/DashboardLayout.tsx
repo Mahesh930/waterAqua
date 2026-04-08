@@ -2,6 +2,7 @@ import { ReactNode, useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { Droplets, Menu, X, LogOut } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { useAuth } from "@/contexts/AuthContext";
 
 interface NavItem {
   label: string;
@@ -19,13 +20,17 @@ export default function DashboardLayout({ children, navItems, title }: Props) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const location = useLocation();
   const navigate = useNavigate();
+  const { signOut, profile } = useAuth();
+
+  const handleLogout = async () => {
+    await signOut();
+    navigate("/login");
+  };
 
   return (
     <div className="min-h-screen flex bg-background">
-      {/* Mobile overlay */}
       {sidebarOpen && <div className="fixed inset-0 bg-foreground/20 z-40 lg:hidden" onClick={() => setSidebarOpen(false)} />}
 
-      {/* Sidebar */}
       <aside className={`fixed lg:sticky top-0 left-0 z-50 h-screen w-64 bg-card border-r border-border flex flex-col transition-transform lg:translate-x-0 ${sidebarOpen ? "translate-x-0" : "-translate-x-full"}`}>
         <div className="h-16 flex items-center gap-2 px-5 border-b border-border">
           <Droplets className="h-6 w-6 text-primary" />
@@ -43,14 +48,18 @@ export default function DashboardLayout({ children, navItems, title }: Props) {
             );
           })}
         </nav>
-        <div className="p-3 border-t border-border">
-          <button onClick={() => navigate("/login")} className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-muted-foreground hover:bg-muted hover:text-foreground w-full transition-colors">
+        <div className="p-3 border-t border-border space-y-2">
+          {profile?.full_name && (
+            <div className="px-3 py-1 text-xs text-muted-foreground truncate">
+              {profile.full_name}
+            </div>
+          )}
+          <button onClick={handleLogout} className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-muted-foreground hover:bg-muted hover:text-foreground w-full transition-colors">
             <LogOut className="h-4 w-4" /> Log Out
           </button>
         </div>
       </aside>
 
-      {/* Main */}
       <div className="flex-1 flex flex-col min-w-0">
         <header className="h-16 flex items-center gap-3 px-4 border-b border-border bg-card sticky top-0 z-30">
           <Button variant="ghost" size="icon" className="lg:hidden" onClick={() => setSidebarOpen(true)}>
