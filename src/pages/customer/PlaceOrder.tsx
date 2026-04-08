@@ -4,10 +4,11 @@ import { Minus, Plus, MapPin } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { suppliers } from "@/lib/mock-data";
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/contexts/AuthContext";
+import { supabase } from "@/integrations/supabase/client";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 
 export default function PlaceOrder() {
   const [params] = useSearchParams();
@@ -15,16 +16,49 @@ export default function PlaceOrder() {
   const [supplierId, setSupplierId] = useState(preselected);
   const [quantity, setQuantity] = useState(1);
   const [address, setAddress] = useState("");
+  const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
   const { toast } = useToast();
+  const { user } = useAuth();
+  const queryClient = useQueryClient();
+
+  const { data: suppliers = [] } = useQuery({
+    queryKey: ["suppliers"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("suppliers")
+        .select("*")
+        .eq("available", true)
+        .order("rating", { ascending: false });
+      if (error) throw error;
+      return data;
+    },
+  });
 
   const supplier = suppliers.find(s => s.id === supplierId);
-  const total = supplier ? supplier.pricePerCan * quantity : 0;
+  const total = supplier ? Number(supplier.price_per_can) * quantity : 0;
 
-  const handleOrder = (e: React.FormEvent) => {
+  const handleOrder = async (e: React.FormEvent) => {
     e.preventDefault();
-    toast({ title: "Order Placed! 🎉", description: `${quantity} cans from ${supplier?.name}. Total: ₹${total}` });
-    navigate("/customer/history");
+    if (!user || !supplier) return;
+    setLoading(true);
+
+    const { error } = await supabase.from("orders").insert({
+      customer_id: user.id,
+      supplier_id: supplier.id,
+      quantity,
+      total_amount: total,
+      delivery_address: address,
+    });
+
+    if (error) {
+      toast({ title: "Order failed", description: error.message, variant: "destructive" });
+    } else {
+      toast({ title: "Order Placed! 🎉", description: `${quantity} cans from ${supplier.business_name}. Total: ₹${total}` });
+      queryClient.invalidateQueries({ queryKey: ["customer-orders"] });
+      navigate("/customer/history");
+    }
+    setLoading(false);
   };
 
   return (
@@ -41,8 +75,8 @@ export default function PlaceOrder() {
             <Select value={supplierId} onValueChange={setSupplierId}>
               <SelectTrigger><SelectValue placeholder="Select a supplier" /></SelectTrigger>
               <SelectContent>
-                {suppliers.filter(s => s.available).map(s => (
-                  <SelectItem key={s.id} value={s.id}>{s.name} — ₹{s.pricePerCan}/can</SelectItem>
+                {suppliers.map(s => (
+                  <SelectItem key={s.id} value={s.id}>{s.business_name} — ₹{Number(s.price_per_can)}/can</SelectItem>
                 ))}
               </SelectContent>
             </Select>
@@ -53,12 +87,12 @@ export default function PlaceOrder() {
           <CardHeader className="pb-3"><CardTitle className="text-base">Quantity</CardTitle></CardHeader>
           <CardContent>
             <div className="flex items-center gap-4">
-              <Button type="button" variant="outline" size="icon" onClick={() => setQuantity(Math.max(1, quantity - 1))}><Minus className="h-4 w-4" /></Button>
+              <Button type="button" variant="outline" size="icon" onClick={() => setQuantity(Math.max(supplier?.min_order || 1, quantity - 1))}><Minus className="h-4 w-4" /></Button>
               <span className="text-2xl font-heading font-bold w-12 text-center">{quantity}</span>
               <Button type="button" variant="outline" size="icon" onClick={() => setQuantity(quantity + 1)}><Plus className="h-4 w-4" /></Button>
               <span className="text-sm text-muted-foreground">cans</span>
             </div>
-            {supplier && <p className="text-xs text-muted-foreground mt-2">Min order: {supplier.minOrder} can(s)</p>}
+            {supplier && <p className="text-xs text-muted-foreground mt-2">Min order: {supplier.min_order} can(s)</p>}
           </CardContent>
         </Card>
 
@@ -78,7 +112,7 @@ export default function PlaceOrder() {
               <div className="flex justify-between items-center">
                 <div>
                   <p className="text-sm text-muted-foreground">Order Summary</p>
-                  <p className="font-medium">{quantity} × ₹{supplier.pricePerCan}</p>
+                  <p className="font-medium">{quantity} × ₹{Number(supplier.price_per_can)}</p>
                 </div>
                 <div className="text-right">
                   <p className="text-sm text-muted-foreground">Total</p>
@@ -89,8 +123,8 @@ export default function PlaceOrder() {
           </Card>
         )}
 
-        <Button type="submit" className="w-full" size="lg" disabled={!supplierId || !address}>
-          Place Order — ₹{total}
+        <Button type="submit" className="w-full" size="lg" disabled={!supplierId || !address || loading}>
+          {loading ? "Placing order..." : `Place Order — ₹${total}`}
         </Button>
       </form>
     </div>
