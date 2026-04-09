@@ -169,6 +169,16 @@ export default function Register() {
                 <p className="text-xs text-muted-foreground mt-1">Helps us find nearby tanker suppliers</p>
               </div>
             )}
+            {role === "customer" && (
+              <div>
+                <Label htmlFor="referral">Referral Code (optional)</Label>
+                <div className="relative mt-1">
+                  <Gift className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <Input id="referral" placeholder="e.g. AQUA1234" className="pl-10 rounded-xl uppercase" value={referralInput} onChange={e => setReferralInput(e.target.value.toUpperCase())} />
+                </div>
+                <p className="text-xs text-muted-foreground mt-1">Both you and your friend earn ₹50!</p>
+              </div>
+            )}
             <Button type="submit" className="w-full rounded-xl" disabled={loading}>
               {loading ? "Creating account..." : "Create Account"}
             </Button>
