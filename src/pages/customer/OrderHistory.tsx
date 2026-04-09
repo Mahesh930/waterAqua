@@ -1,8 +1,12 @@
+import { useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
-import { useQuery } from "@tanstack/react-query";
-import { Package, Droplets } from "lucide-react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { Package, Droplets, Star, Send } from "lucide-react";
 import { motion } from "framer-motion";
+import { Button } from "@/components/ui/button";
+import { Textarea } from "@/components/ui/textarea";
+import { useToast } from "@/hooks/use-toast";
 
 const statusColors: Record<string, string> = {
   placed: "bg-warning/10 text-warning",
@@ -20,8 +24,60 @@ const statusLabels: Record<string, string> = {
   cancelled: "Cancelled",
 };
 
+function RatingWidget({ orderId, supplierId, customerId, onDone }: {
+  orderId: string; supplierId: string; customerId: string; onDone: () => void;
+}) {
+  const [rating, setRating] = useState(0);
+  const [hover, setHover] = useState(0);
+  const [comment, setComment] = useState("");
+  const [loading, setLoading] = useState(false);
+  const { toast } = useToast();
+
+  const submit = async () => {
+    if (rating === 0) { toast({ title: "Please select a rating", variant: "destructive" }); return; }
+    setLoading(true);
+    const { error } = await supabase.from("feedback").insert({
+      order_id: orderId,
+      supplier_id: supplierId,
+      customer_id: customerId,
+      rating,
+      comment: comment.trim() || null,
+    });
+    if (error) {
+      toast({ title: "Failed to submit", description: error.message, variant: "destructive" });
+    } else {
+      toast({ title: "Thank you! ⭐", description: "Your feedback has been submitted." });
+      onDone();
+    }
+    setLoading(false);
+  };
+
+  return (
+    <div className="mt-3 p-4 rounded-xl bg-muted/30 space-y-3">
+      <p className="text-sm font-medium">Rate this delivery</p>
+      <div className="flex gap-1">
+        {[1, 2, 3, 4, 5].map(star => (
+          <button key={star} type="button"
+            onMouseEnter={() => setHover(star)} onMouseLeave={() => setHover(0)}
+            onClick={() => setRating(star)}>
+            <Star className={`h-6 w-6 transition-colors ${
+              star <= (hover || rating) ? "fill-warning text-warning" : "text-muted-foreground/30"
+            }`} />
+          </button>
+        ))}
+      </div>
+      <Textarea placeholder="Share your experience (optional)..." value={comment}
+        onChange={e => setComment(e.target.value)} className="rounded-xl resize-none" rows={2} />
+      <Button size="sm" className="gap-2 rounded-xl" onClick={submit} disabled={loading}>
+        <Send className="h-3.5 w-3.5" /> {loading ? "Submitting..." : "Submit Review"}
+      </Button>
+    </div>
+  );
+}
+
 export default function OrderHistory() {
   const { user } = useAuth();
+  const queryClient = useQueryClient();
 
   const { data: orders = [], isLoading } = useQuery({
     queryKey: ["customer-orders", user?.id],
@@ -36,6 +92,21 @@ export default function OrderHistory() {
     },
     enabled: !!user,
   });
+
+  const { data: feedbacks = [] } = useQuery({
+    queryKey: ["my-feedbacks", user?.id],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("feedback")
+        .select("order_id, rating, comment")
+        .eq("customer_id", user!.id);
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!user,
+  });
+
+  const feedbackByOrder = new Map(feedbacks.map(f => [f.order_id, f]));
 
   return (
     <div className="space-y-6">
@@ -56,34 +127,57 @@ export default function OrderHistory() {
         </div>
       ) : (
         <div className="space-y-3">
-          {orders.map((order, i) => (
-            <motion.div key={order.id}
-              initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.05 }}
-              className="glass-card rounded-2xl p-4">
-              <div className="flex items-start justify-between mb-2">
-                <div className="flex items-center gap-3">
-                  <div className="h-10 w-10 rounded-xl bg-primary/10 flex items-center justify-center">
-                    <Droplets className="h-5 w-5 text-primary" />
-                  </div>
-                  <div>
-                    <div className="flex items-center gap-2">
-                      <span className="font-medium">{order.suppliers?.business_name ?? "Unknown"}</span>
-                      <span className={`px-2.5 py-0.5 rounded-lg text-xs font-medium ${statusColors[order.status]}`}>
-                        {statusLabels[order.status]}
-                      </span>
+          {orders.map((order, i) => {
+            const existingFeedback = feedbackByOrder.get(order.id);
+            return (
+              <motion.div key={order.id}
+                initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.05 }}
+                className="glass-card rounded-2xl p-4">
+                <div className="flex items-start justify-between mb-2">
+                  <div className="flex items-center gap-3">
+                    <div className="h-10 w-10 rounded-xl bg-primary/10 flex items-center justify-center">
+                      <Droplets className="h-5 w-5 text-primary" />
                     </div>
-                    <p className="text-xs text-muted-foreground mt-0.5">Order {order.id.slice(0, 8)}</p>
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <span className="font-medium">{order.suppliers?.business_name ?? "Unknown"}</span>
+                        <span className={`px-2.5 py-0.5 rounded-lg text-xs font-medium ${statusColors[order.status]}`}>
+                          {statusLabels[order.status]}
+                        </span>
+                      </div>
+                      <p className="text-xs text-muted-foreground mt-0.5">Order {order.id.slice(0, 8)}</p>
+                    </div>
                   </div>
+                  <span className="font-heading font-bold text-primary">₹{Number(order.total_amount)}</span>
                 </div>
-                <span className="font-heading font-bold text-primary">₹{Number(order.total_amount)}</span>
-              </div>
-              <div className="flex items-center gap-4 text-xs text-muted-foreground ml-13">
-                <span>{order.quantity} cans</span>
-                <span>·</span>
-                <span>{new Date(order.created_at).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })}</span>
-              </div>
-            </motion.div>
-          ))}
+                <div className="flex items-center gap-4 text-xs text-muted-foreground ml-13">
+                  <span>{order.quantity} cans</span>
+                  <span>·</span>
+                  <span>{new Date(order.created_at).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })}</span>
+                </div>
+
+                {/* Review section */}
+                {order.status === "delivered" && !existingFeedback && (
+                  <RatingWidget
+                    orderId={order.id}
+                    supplierId={order.supplier_id}
+                    customerId={user!.id}
+                    onDone={() => queryClient.invalidateQueries({ queryKey: ["my-feedbacks"] })}
+                  />
+                )}
+                {existingFeedback && (
+                  <div className="mt-3 p-3 rounded-xl bg-muted/30 flex items-center gap-2">
+                    <div className="flex">
+                      {[1, 2, 3, 4, 5].map(s => (
+                        <Star key={s} className={`h-3.5 w-3.5 ${s <= existingFeedback.rating ? "fill-warning text-warning" : "text-muted-foreground/30"}`} />
+                      ))}
+                    </div>
+                    {existingFeedback.comment && <span className="text-xs text-muted-foreground ml-2">{existingFeedback.comment}</span>}
+                  </div>
+                )}
+              </motion.div>
+            );
+          })}
         </div>
       )}
     </div>
