@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Star, MapPin, Clock, Droplets, Search, Navigation, ShoppingCart, Truck as TruckIcon } from "lucide-react";
+import { Star, MapPin, Clock, Droplets, Search, Navigation, ShoppingCart, Truck as TruckIcon, Shield, Zap, ChevronRight, Filter } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -9,10 +9,14 @@ import { useQuery } from "@tanstack/react-query";
 import { motion } from "framer-motion";
 import { usePincode } from "@/hooks/use-pincode";
 
+const container = { hidden: {}, show: { transition: { staggerChildren: 0.06 } } };
+const item = { hidden: { opacity: 0, y: 20 }, show: { opacity: 1, y: 0 } };
+
 export default function BrowseSuppliers() {
   const [search, setSearch] = useState("");
   const [pincodeInput, setPincodeInput] = useState("");
   const [locationFilter, setLocationFilter] = useState("");
+  const [sortBy, setSortBy] = useState<"rating" | "price" | "name">("rating");
   const navigate = useNavigate();
   const { lookup, data: pincodeData, loading: pincodeLoading } = usePincode();
 
@@ -29,158 +33,208 @@ export default function BrowseSuppliers() {
     },
   });
 
-  // Auto-lookup pincode
   useEffect(() => {
-    if (pincodeInput.length === 6) {
-      lookup(pincodeInput);
-    }
+    if (pincodeInput.length === 6) lookup(pincodeInput);
   }, [pincodeInput, lookup]);
 
-  // Auto-set location filter from pincode
   useEffect(() => {
-    if (pincodeData) {
-      setLocationFilter(pincodeData.area);
-    }
+    if (pincodeData) setLocationFilter(pincodeData.area);
   }, [pincodeData]);
 
   const areas = [...new Set(suppliers.map(s => s.area))];
 
-  const filtered = suppliers.filter(s => {
-    const matchesSearch = s.business_name.toLowerCase().includes(search.toLowerCase()) ||
-      s.area.toLowerCase().includes(search.toLowerCase()) ||
-      s.water_type.toLowerCase().includes(search.toLowerCase());
-    const matchesLocation = !locationFilter || s.area.toLowerCase().includes(locationFilter.toLowerCase());
-    // Also match by pincode if supplier has one
-    const matchesPincode = !pincodeInput || !pincodeData || 
-      (s as any).pincode === pincodeInput || 
-      s.area.toLowerCase().includes((pincodeData?.city || "").toLowerCase()) ||
-      s.area.toLowerCase().includes((pincodeData?.area || "").toLowerCase());
-    return matchesSearch && (matchesLocation || matchesPincode);
-  });
+  const filtered = suppliers
+    .filter(s => {
+      const matchesSearch = s.business_name.toLowerCase().includes(search.toLowerCase()) ||
+        s.area.toLowerCase().includes(search.toLowerCase()) ||
+        s.water_type.toLowerCase().includes(search.toLowerCase());
+      const matchesLocation = !locationFilter || s.area.toLowerCase().includes(locationFilter.toLowerCase());
+      const matchesPincode = !pincodeInput || !pincodeData || 
+        (s as any).pincode === pincodeInput || 
+        s.area.toLowerCase().includes((pincodeData?.city || "").toLowerCase()) ||
+        s.area.toLowerCase().includes((pincodeData?.area || "").toLowerCase());
+      return matchesSearch && (matchesLocation || matchesPincode);
+    })
+    .sort((a, b) => {
+      if (sortBy === "price") return Number(a.price_per_can) - Number(b.price_per_can);
+      if (sortBy === "name") return a.business_name.localeCompare(b.business_name);
+      return Number(b.rating) - Number(a.rating);
+    });
 
   return (
-    <div className="space-y-6">
-      <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
-        <h2 className="font-heading text-3xl font-bold mb-1">Find Tanker Suppliers</h2>
-        <p className="text-muted-foreground">Browse verified water tanker suppliers in your area.</p>
+    <motion.div variants={container} initial="hidden" animate="show" className="space-y-6">
+      {/* Header with stats */}
+      <motion.div variants={item} className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-3">
+        <div>
+          <h2 className="font-heading text-2xl sm:text-3xl font-bold">Find Suppliers</h2>
+          <p className="text-muted-foreground text-sm mt-0.5">
+            {suppliers.length} verified suppliers · {areas.length} service areas
+          </p>
+        </div>
+        <div className="flex items-center gap-2">
+          {(["rating", "price", "name"] as const).map(s => (
+            <button key={s} onClick={() => setSortBy(s)}
+              className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
+                sortBy === s ? "bg-primary text-primary-foreground shadow-md" : "glass text-muted-foreground hover:text-foreground"
+              }`}>
+              {s === "rating" ? "⭐ Rating" : s === "price" ? "💰 Price" : "🔤 Name"}
+            </button>
+          ))}
+        </div>
       </motion.div>
 
-      {/* Search & Pincode bar */}
-      <div className="glass-card rounded-2xl p-4 space-y-3">
+      {/* Search Bar — elevated glass */}
+      <motion.div variants={item} className="glass-card rounded-2xl p-4 shadow-lg ring-1 ring-primary/5">
         <div className="flex flex-col sm:flex-row gap-3">
           <div className="relative flex-1">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <Input placeholder="Search by name, area, water type..." value={search} onChange={e => setSearch(e.target.value)} className="pl-10 rounded-xl" />
+            <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input placeholder="Search supplier, area, water type..." value={search} onChange={e => setSearch(e.target.value)} 
+              className="pl-10 rounded-xl h-11 bg-muted/30 border-0 focus-visible:ring-primary/30" />
           </div>
-          <div className="relative w-full sm:w-48">
-            <Navigation className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <div className="relative w-full sm:w-52">
+            <Navigation className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-primary" />
             <Input 
               placeholder="Enter Pincode" 
               value={pincodeInput} 
               onChange={e => {
                 const v = e.target.value.replace(/\D/g, "").slice(0, 6);
                 setPincodeInput(v);
-                if (v.length < 6) { setLocationFilter(""); }
+                if (v.length < 6) setLocationFilter("");
               }} 
-              className="pl-10 rounded-xl" 
+              className="pl-10 rounded-xl h-11 bg-primary/5 border-primary/20 focus-visible:ring-primary/30 font-medium" 
               maxLength={6}
             />
           </div>
         </div>
-        {pincodeLoading && <p className="text-xs text-muted-foreground animate-pulse">Looking up pincode...</p>}
+        {pincodeLoading && <p className="text-xs text-primary animate-pulse mt-2">🔍 Looking up pincode...</p>}
         {pincodeData && (
-          <div className="flex items-center gap-2 text-sm">
-            <MapPin className="h-3.5 w-3.5 text-primary" />
-            <span className="text-muted-foreground">
-              {pincodeData.area}, {pincodeData.city}, {pincodeData.district}, {pincodeData.state}
+          <motion.div initial={{ opacity: 0, y: -5 }} animate={{ opacity: 1, y: 0 }}
+            className="flex items-center gap-2 mt-3 p-2.5 rounded-xl bg-primary/5 border border-primary/10">
+            <MapPin className="h-3.5 w-3.5 text-primary shrink-0" />
+            <span className="text-sm text-foreground font-medium">
+              {pincodeData.area}, {pincodeData.city}
             </span>
-            <Badge variant="outline" className="rounded-lg text-xs">{pincodeData.pincode}</Badge>
-          </div>
+            <span className="text-xs text-muted-foreground">
+              {pincodeData.district}, {pincodeData.state}
+            </span>
+            <Badge className="ml-auto bg-primary/10 text-primary border-0 text-[10px]">{pincodeData.pincode}</Badge>
+          </motion.div>
         )}
-      </div>
+      </motion.div>
 
-      {/* Area pills */}
+      {/* Area Pills */}
       {areas.length > 0 && (
-        <div className="flex flex-wrap gap-2">
+        <motion.div variants={item} className="flex flex-wrap gap-2">
           <button onClick={() => { setLocationFilter(""); setPincodeInput(""); }}
-            className={`px-3 py-1.5 rounded-xl text-xs font-medium transition-all ${
-              !locationFilter ? "bg-primary text-primary-foreground" : "glass text-muted-foreground hover:text-foreground"
+            className={`px-3.5 py-1.5 rounded-xl text-xs font-semibold transition-all ${
+              !locationFilter ? "bg-primary text-primary-foreground shadow-md shadow-primary/20" : "glass text-muted-foreground hover:text-foreground hover:bg-muted/80"
             }`}>All Areas</button>
           {areas.slice(0, 8).map(a => (
             <button key={a} onClick={() => setLocationFilter(a)}
-              className={`px-3 py-1.5 rounded-xl text-xs font-medium transition-all ${
-                locationFilter === a ? "bg-primary text-primary-foreground" : "glass text-muted-foreground hover:text-foreground"
+              className={`px-3.5 py-1.5 rounded-xl text-xs font-semibold transition-all ${
+                locationFilter === a ? "bg-primary text-primary-foreground shadow-md shadow-primary/20" : "glass text-muted-foreground hover:text-foreground hover:bg-muted/80"
               }`}>{a}</button>
           ))}
-        </div>
+        </motion.div>
       )}
 
+      {/* Results */}
       {isLoading ? (
-        <div className="flex justify-center py-16">
-          <div className="animate-spin h-8 w-8 border-4 border-primary border-t-transparent rounded-full" />
+        <div className="flex flex-col items-center justify-center py-20 gap-3">
+          <div className="animate-spin h-10 w-10 border-4 border-primary border-t-transparent rounded-full" />
+          <p className="text-sm text-muted-foreground">Finding suppliers...</p>
         </div>
       ) : filtered.length === 0 ? (
-        <div className="text-center py-16 text-muted-foreground">
-          <Droplets className="h-12 w-12 mx-auto mb-3 opacity-30" />
-          <p className="font-medium">No suppliers found</p>
-          <p className="text-sm mt-1">Try a different pincode or search term.</p>
+        <div className="text-center py-20">
+          <div className="h-20 w-20 mx-auto mb-4 rounded-full bg-muted/50 flex items-center justify-center">
+            <Droplets className="h-10 w-10 text-muted-foreground/30" />
+          </div>
+          <p className="font-heading font-semibold text-lg">No suppliers found</p>
+          <p className="text-sm text-muted-foreground mt-1">Try a different pincode or search term.</p>
         </div>
       ) : (
-        <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
-          {filtered.map((s, i) => (
-            <motion.div key={s.id}
-              initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.05 }}
-              className={`glass-card rounded-2xl p-5 hover:shadow-xl hover:shadow-primary/5 transition-all duration-300 group ${!s.available ? "opacity-50" : ""}`}>
-              <div className="flex items-start justify-between mb-3">
-                <div className="h-12 w-12 rounded-2xl bg-gradient-to-br from-primary/15 to-accent/15 flex items-center justify-center text-2xl">
-                  🚛
+        <>
+          <motion.p variants={item} className="text-xs text-muted-foreground font-medium">
+            Showing {filtered.length} supplier{filtered.length !== 1 ? "s" : ""}
+          </motion.p>
+          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
+            {filtered.map((s, i) => (
+              <motion.div key={s.id} variants={item}
+                whileHover={{ y: -4, transition: { duration: 0.2 } }}
+                className={`glass-card rounded-2xl overflow-hidden hover:shadow-2xl hover:shadow-primary/10 transition-all duration-300 group ${!s.available ? "opacity-50 pointer-events-none" : ""}`}>
+                
+                {/* Card Header with gradient */}
+                <div className="relative h-20 bg-gradient-to-br from-primary/10 via-accent/5 to-transparent p-4">
+                  <div className="flex items-start justify-between">
+                    <div className="h-14 w-14 rounded-2xl bg-card shadow-lg flex items-center justify-center text-2xl border border-border/50">
+                      🚛
+                    </div>
+                    <div className="flex items-center gap-1.5">
+                      {s.available && s.stock > 0 && (
+                        <span className="flex items-center gap-1 text-[10px] font-semibold text-success bg-success/10 px-2 py-0.5 rounded-full">
+                          <span className="h-1.5 w-1.5 rounded-full bg-success animate-pulse" /> Available
+                        </span>
+                      )}
+                      {!s.available && <Badge variant="secondary" className="rounded-lg text-[10px]">Offline</Badge>}
+                    </div>
+                  </div>
                 </div>
-                <div className="flex flex-col items-end gap-1">
-                  {!s.available && <Badge variant="secondary" className="rounded-lg">Unavailable</Badge>}
-                  {(s as any).pincode && <Badge variant="outline" className="rounded-lg text-[10px]">{(s as any).pincode}</Badge>}
-                </div>
-              </div>
-              <h3 className="font-heading font-semibold text-base mb-2">{s.business_name}</h3>
-              <div className="space-y-1.5 text-sm text-muted-foreground mb-3">
-                <div className="flex items-center gap-2"><MapPin className="h-3.5 w-3.5 text-primary/60" /> {s.area}</div>
-                <div className="flex items-center gap-2"><Droplets className="h-3.5 w-3.5 text-primary/60" /> {s.water_type}</div>
-                <div className="flex items-center gap-2"><Clock className="h-3.5 w-3.5 text-primary/60" /> {s.delivery_time}</div>
-              </div>
 
-              {/* Pricing */}
-              <div className="rounded-xl bg-muted/30 p-3 mb-3 space-y-1">
-                <div className="flex items-center justify-between text-sm">
-                  <span className="flex items-center gap-1.5 text-muted-foreground"><ShoppingCart className="h-3.5 w-3.5" /> Per Can</span>
-                  <span className="font-heading font-bold text-primary">₹{Number(s.price_per_can)}</span>
-                </div>
-                <div className="flex items-center justify-between text-sm">
-                  <span className="flex items-center gap-1.5 text-muted-foreground"><TruckIcon className="h-3.5 w-3.5" /> Per Tanker</span>
-                  <span className="font-heading font-bold text-accent">₹{Number((s as any).price_per_tanker || 500)}</span>
-                </div>
-              </div>
+                {/* Card Body */}
+                <div className="p-4 pt-2 space-y-3">
+                  <div>
+                    <h3 className="font-heading font-bold text-base group-hover:text-primary transition-colors">{s.business_name}</h3>
+                    <div className="flex items-center gap-1.5 mt-1">
+                      <div className="flex items-center gap-0.5">
+                        <Star className="h-3.5 w-3.5 fill-warning text-warning" />
+                        <span className="text-sm font-bold">{Number(s.rating).toFixed(1)}</span>
+                      </div>
+                      <span className="text-xs text-muted-foreground">({s.review_count} reviews)</span>
+                      {Number(s.rating) >= 4.5 && (
+                        <Badge className="bg-warning/10 text-warning border-0 text-[9px] px-1.5">TOP RATED</Badge>
+                      )}
+                    </div>
+                  </div>
 
-              <div className="flex items-center justify-between mb-4">
-                <div className="flex items-center gap-1.5">
-                  <Star className="h-4 w-4 fill-warning text-warning" />
-                  <span className="font-medium text-sm">{Number(s.rating).toFixed(1)}</span>
-                  <span className="text-xs text-muted-foreground">({s.review_count})</span>
+                  <div className="space-y-1.5 text-xs text-muted-foreground">
+                    <div className="flex items-center gap-2"><MapPin className="h-3 w-3 text-primary/60 shrink-0" /> {s.area}</div>
+                    <div className="flex items-center gap-2"><Droplets className="h-3 w-3 text-primary/60 shrink-0" /> {s.water_type}</div>
+                    <div className="flex items-center gap-2"><Clock className="h-3 w-3 text-primary/60 shrink-0" /> {s.delivery_time} · {s.stock} cans</div>
+                  </div>
+
+                  {/* Pricing Cards */}
+                  <div className="grid grid-cols-2 gap-2">
+                    <div className="rounded-xl bg-primary/5 border border-primary/10 p-2.5 text-center">
+                      <ShoppingCart className="h-3.5 w-3.5 text-primary mx-auto mb-1" />
+                      <p className="font-heading font-bold text-primary text-lg leading-none">₹{Number(s.price_per_can)}</p>
+                      <p className="text-[10px] text-muted-foreground mt-0.5">per can</p>
+                    </div>
+                    <div className="rounded-xl bg-accent/5 border border-accent/10 p-2.5 text-center">
+                      <TruckIcon className="h-3.5 w-3.5 text-accent mx-auto mb-1" />
+                      <p className="font-heading font-bold text-accent text-lg leading-none">₹{Number((s as any).price_per_tanker || 500)}</p>
+                      <p className="text-[10px] text-muted-foreground mt-0.5">per tanker</p>
+                    </div>
+                  </div>
+
+                  {/* CTA Buttons */}
+                  {s.available && (
+                    <div className="flex gap-2 pt-1">
+                      <Button size="sm" className="flex-1 rounded-xl h-9 text-xs font-semibold gap-1.5 shadow-md shadow-primary/10" 
+                        onClick={() => navigate(`/customer/order?supplier=${s.id}&type=can`)}>
+                        <ShoppingCart className="h-3 w-3" /> Order Cans
+                      </Button>
+                      <Button size="sm" variant="outline" className="flex-1 rounded-xl h-9 text-xs font-semibold gap-1.5 glass hover:bg-accent/10 hover:text-accent hover:border-accent/30" 
+                        onClick={() => navigate(`/customer/order?supplier=${s.id}&type=tanker`)}>
+                        <TruckIcon className="h-3 w-3" /> Tanker
+                      </Button>
+                    </div>
+                  )}
                 </div>
-                <span className="text-xs text-muted-foreground">{s.stock} cans in stock</span>
-              </div>
-              {s.available && (
-                <div className="flex gap-2">
-                  <Button size="sm" className="flex-1 rounded-xl" onClick={() => navigate(`/customer/order?supplier=${s.id}&type=can`)}>
-                    Order Cans
-                  </Button>
-                  <Button size="sm" variant="outline" className="flex-1 rounded-xl glass" onClick={() => navigate(`/customer/order?supplier=${s.id}&type=tanker`)}>
-                    Order Tanker
-                  </Button>
-                </div>
-              )}
-            </motion.div>
-          ))}
-        </div>
+              </motion.div>
+            ))}
+          </div>
+        </>
       )}
-    </div>
+    </motion.div>
   );
 }
