@@ -1,10 +1,10 @@
 import { Link } from "react-router-dom";
-import { ShoppingBag, Truck, Clock } from "lucide-react";
-import { Card, CardContent } from "@/components/ui/card";
+import { ShoppingBag, Truck, Clock, ArrowRight, Droplets } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery } from "@tanstack/react-query";
+import { motion } from "framer-motion";
 
 const statusColors: Record<string, string> = {
   placed: "bg-warning/10 text-warning",
@@ -41,59 +41,69 @@ export default function CustomerHome() {
 
   const activeOrders = orders.filter(o => o.status !== "delivered" && o.status !== "cancelled");
 
+  const stats = [
+    { icon: ShoppingBag, label: "Total Orders", value: orders.length, color: "from-primary/20 to-primary/5", iconColor: "text-primary" },
+    { icon: Truck, label: "Active", value: activeOrders.length, color: "from-accent/20 to-accent/5", iconColor: "text-accent" },
+    { icon: Clock, label: "Delivered", value: orders.filter(o => o.status === "delivered").length, color: "from-success/20 to-success/5", iconColor: "text-success" },
+  ];
+
   return (
-    <div className="space-y-6">
-      <div>
-        <h2 className="font-heading text-2xl font-bold mb-1">
-          Welcome back{profile?.full_name ? `, ${profile.full_name}` : ""}! 👋
+    <div className="space-y-8">
+      <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
+        <h2 className="font-heading text-3xl font-bold mb-1">
+          Welcome{profile?.full_name ? `, ${profile.full_name}` : ""}! 👋
         </h2>
-        <p className="text-muted-foreground text-sm">Here's your water delivery overview.</p>
-      </div>
+        <p className="text-muted-foreground">Your water tanker delivery overview.</p>
+      </motion.div>
 
       <div className="grid sm:grid-cols-3 gap-4">
-        {[
-          { icon: ShoppingBag, label: "Total Orders", value: orders.length, color: "text-primary" },
-          { icon: Truck, label: "Active Orders", value: activeOrders.length, color: "text-accent" },
-          { icon: Clock, label: "Delivered", value: orders.filter(o => o.status === "delivered").length, color: "text-success" },
-        ].map(s => (
-          <Card key={s.label}>
-            <CardContent className="flex items-center gap-4 p-5">
-              <div className="h-10 w-10 rounded-lg bg-muted flex items-center justify-center">
-                <s.icon className={`h-5 w-5 ${s.color}`} />
+        {stats.map((s, i) => (
+          <motion.div key={s.label} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.1 }}
+            className={`glass-card rounded-2xl p-5 bg-gradient-to-br ${s.color}`}>
+            <div className="flex items-center gap-4">
+              <div className="h-12 w-12 rounded-2xl bg-card/50 flex items-center justify-center">
+                <s.icon className={`h-6 w-6 ${s.iconColor}`} />
               </div>
               <div>
                 <p className="text-sm text-muted-foreground">{s.label}</p>
-                <p className="text-2xl font-heading font-bold">{s.value}</p>
+                <p className="text-3xl font-heading font-bold">{s.value}</p>
               </div>
-            </CardContent>
-          </Card>
+            </div>
+          </motion.div>
         ))}
       </div>
 
       {activeOrders.length > 0 && (
         <div>
-          <h3 className="font-heading font-semibold text-lg mb-3">Active Orders</h3>
+          <h3 className="font-heading font-semibold text-lg mb-4">Active Orders</h3>
           <div className="space-y-3">
             {activeOrders.map(order => (
-              <Card key={order.id}>
-                <CardContent className="flex items-center justify-between p-4">
+              <div key={order.id} className="glass-card rounded-2xl p-4 flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="h-10 w-10 rounded-xl bg-primary/10 flex items-center justify-center">
+                    <Droplets className="h-5 w-5 text-primary" />
+                  </div>
                   <div>
                     <p className="font-medium">{order.suppliers?.business_name ?? "Unknown"}</p>
                     <p className="text-sm text-muted-foreground">{order.quantity} cans · ₹{order.total_amount}</p>
                   </div>
-                  <span className={`px-3 py-1 rounded-full text-xs font-medium ${statusColors[order.status]}`}>
-                    {statusLabels[order.status]}
-                  </span>
-                </CardContent>
-              </Card>
+                </div>
+                <span className={`px-3 py-1.5 rounded-xl text-xs font-medium ${statusColors[order.status]}`}>
+                  {statusLabels[order.status]}
+                </span>
+              </div>
             ))}
           </div>
         </div>
       )}
 
       <div className="flex gap-3">
-        <Link to="/customer/suppliers"><Button>Browse Suppliers</Button></Link>
-        <Link to="/customer/order"><Button variant="outline">Place Order</Button></Link>
+        <Link to="/customer/suppliers">
+          <Button className="gap-2 rounded-xl">Browse Suppliers <ArrowRight className="h-4 w-4" /></Button>
+        </Link>
+        <Link to="/customer/order">
+          <Button variant="outline" className="rounded-xl glass">Place Order</Button>
+        </Link>
       </div>
     </div>
   );

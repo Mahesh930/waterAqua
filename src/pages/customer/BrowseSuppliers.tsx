@@ -1,15 +1,16 @@
 import { useState } from "react";
-import { Star, MapPin, Clock, Droplets } from "lucide-react";
-import { Card, CardContent } from "@/components/ui/card";
+import { Star, MapPin, Clock, Droplets, Search } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery } from "@tanstack/react-query";
+import { motion } from "framer-motion";
 
 export default function BrowseSuppliers() {
   const [search, setSearch] = useState("");
+  const [locationFilter, setLocationFilter] = useState("");
   const navigate = useNavigate();
 
   const { data: suppliers = [], isLoading } = useQuery({
@@ -24,58 +25,93 @@ export default function BrowseSuppliers() {
     },
   });
 
-  const filtered = suppliers.filter(s =>
-    s.business_name.toLowerCase().includes(search.toLowerCase()) ||
-    s.area.toLowerCase().includes(search.toLowerCase()) ||
-    s.water_type.toLowerCase().includes(search.toLowerCase())
-  );
+  // Extract unique cities/areas
+  const areas = [...new Set(suppliers.map(s => s.area))];
+
+  const filtered = suppliers.filter(s => {
+    const matchesSearch = s.business_name.toLowerCase().includes(search.toLowerCase()) ||
+      s.area.toLowerCase().includes(search.toLowerCase()) ||
+      s.water_type.toLowerCase().includes(search.toLowerCase());
+    const matchesLocation = !locationFilter || s.area.toLowerCase().includes(locationFilter.toLowerCase());
+    return matchesSearch && matchesLocation;
+  });
 
   return (
     <div className="space-y-6">
-      <div>
-        <h2 className="font-heading text-2xl font-bold mb-1">Browse Suppliers</h2>
-        <p className="text-muted-foreground text-sm">Find trusted water suppliers near you.</p>
+      <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
+        <h2 className="font-heading text-3xl font-bold mb-1">Find Tanker Suppliers</h2>
+        <p className="text-muted-foreground">Browse verified water tanker suppliers in your area.</p>
+      </motion.div>
+
+      <div className="flex flex-col sm:flex-row gap-3">
+        <div className="relative flex-1 max-w-md">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <Input placeholder="Search suppliers..." value={search} onChange={e => setSearch(e.target.value)} className="pl-10 rounded-xl" />
+        </div>
+        <div className="relative max-w-xs">
+          <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <Input placeholder="Filter by city/area..." value={locationFilter} onChange={e => setLocationFilter(e.target.value)} className="pl-10 rounded-xl" />
+        </div>
       </div>
 
-      <Input placeholder="Search by name, area, or water type..." value={search} onChange={e => setSearch(e.target.value)} className="max-w-md" />
+      {/* Area pills */}
+      {areas.length > 0 && (
+        <div className="flex flex-wrap gap-2">
+          <button onClick={() => setLocationFilter("")}
+            className={`px-3 py-1.5 rounded-xl text-xs font-medium transition-all ${
+              !locationFilter ? "bg-primary text-primary-foreground" : "glass text-muted-foreground hover:text-foreground"
+            }`}>All Areas</button>
+          {areas.slice(0, 8).map(a => (
+            <button key={a} onClick={() => setLocationFilter(a)}
+              className={`px-3 py-1.5 rounded-xl text-xs font-medium transition-all ${
+                locationFilter === a ? "bg-primary text-primary-foreground" : "glass text-muted-foreground hover:text-foreground"
+              }`}>{a}</button>
+          ))}
+        </div>
+      )}
 
       {isLoading ? (
-        <div className="flex justify-center py-12">
+        <div className="flex justify-center py-16">
           <div className="animate-spin h-8 w-8 border-4 border-primary border-t-transparent rounded-full" />
         </div>
       ) : filtered.length === 0 ? (
-        <div className="text-center py-12 text-muted-foreground">
-          <Droplets className="h-10 w-10 mx-auto mb-3 opacity-40" />
-          <p>No suppliers found. Try a different search.</p>
+        <div className="text-center py-16 text-muted-foreground">
+          <Droplets className="h-12 w-12 mx-auto mb-3 opacity-30" />
+          <p className="font-medium">No suppliers found</p>
+          <p className="text-sm mt-1">Try a different area or search term.</p>
         </div>
       ) : (
         <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
-          {filtered.map(s => (
-            <Card key={s.id} className={`hover:shadow-md transition-shadow ${!s.available ? "opacity-60" : ""}`}>
-              <CardContent className="p-5">
-                <div className="flex items-start justify-between mb-3">
-                  <div className="text-3xl">💧</div>
-                  {!s.available && <Badge variant="secondary">Unavailable</Badge>}
+          {filtered.map((s, i) => (
+            <motion.div key={s.id}
+              initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.05 }}
+              className={`glass-card rounded-2xl p-5 hover:shadow-xl hover:shadow-primary/5 transition-all duration-300 ${!s.available ? "opacity-50" : ""}`}>
+              <div className="flex items-start justify-between mb-4">
+                <div className="h-12 w-12 rounded-2xl bg-gradient-to-br from-primary/15 to-accent/15 flex items-center justify-center text-2xl">
+                  🚛
                 </div>
-                <h3 className="font-heading font-semibold text-base mb-1">{s.business_name}</h3>
-                <div className="space-y-1 text-sm text-muted-foreground mb-3">
-                  <div className="flex items-center gap-1.5"><MapPin className="h-3.5 w-3.5" /> {s.area}</div>
-                  <div className="flex items-center gap-1.5"><Droplets className="h-3.5 w-3.5" /> {s.water_type}</div>
-                  <div className="flex items-center gap-1.5"><Clock className="h-3.5 w-3.5" /> {s.delivery_time}</div>
+                {!s.available && <Badge variant="secondary" className="rounded-lg">Unavailable</Badge>}
+              </div>
+              <h3 className="font-heading font-semibold text-base mb-2">{s.business_name}</h3>
+              <div className="space-y-1.5 text-sm text-muted-foreground mb-4">
+                <div className="flex items-center gap-2"><MapPin className="h-3.5 w-3.5 text-primary/60" /> {s.area}</div>
+                <div className="flex items-center gap-2"><Droplets className="h-3.5 w-3.5 text-primary/60" /> {s.water_type}</div>
+                <div className="flex items-center gap-2"><Clock className="h-3.5 w-3.5 text-primary/60" /> {s.delivery_time}</div>
+              </div>
+              <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center gap-1.5">
+                  <Star className="h-4 w-4 fill-warning text-warning" />
+                  <span className="font-medium text-sm">{Number(s.rating).toFixed(1)}</span>
+                  <span className="text-xs text-muted-foreground">({s.review_count})</span>
                 </div>
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-1">
-                    <Star className="h-4 w-4 fill-warning text-warning" />
-                    <span className="font-medium text-sm">{Number(s.rating).toFixed(1)}</span>
-                    <span className="text-xs text-muted-foreground">({s.review_count})</span>
-                  </div>
-                  <span className="font-heading font-bold text-primary">₹{Number(s.price_per_can)}/can</span>
-                </div>
-                {s.available && (
-                  <Button size="sm" className="w-full mt-3" onClick={() => navigate(`/customer/order?supplier=${s.id}`)}>Order Now</Button>
-                )}
-              </CardContent>
-            </Card>
+                <span className="font-heading font-bold text-primary text-lg">₹{Number(s.price_per_can)}<span className="text-xs font-normal text-muted-foreground">/can</span></span>
+              </div>
+              {s.available && (
+                <Button size="sm" className="w-full rounded-xl" onClick={() => navigate(`/customer/order?supplier=${s.id}`)}>
+                  Order Tanker
+                </Button>
+              )}
+            </motion.div>
           ))}
         </div>
       )}

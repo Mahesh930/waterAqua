@@ -1,82 +1,93 @@
-import { useState } from "react";
-import { Card, CardContent } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { useToast } from "@/hooks/use-toast";
-import { UserCheck, Ban, Star } from "lucide-react";
-
-const customers = [
-  { id: "1", name: "Rahul Sharma", email: "rahul@email.com", orders: 12, status: "active" },
-  { id: "2", name: "Priya Patel", email: "priya@email.com", orders: 8, status: "active" },
-  { id: "3", name: "Arjun Reddy", email: "arjun@email.com", orders: 3, status: "active" },
-  { id: "4", name: "Meera Iyer", email: "meera@email.com", orders: 0, status: "blocked" },
-];
-
-const suppliersData = [
-  { id: "1", name: "PureFlow Water Co.", area: "Koramangala", rating: 4.8, status: "verified" },
-  { id: "2", name: "AquaPure Solutions", area: "Indiranagar", rating: 4.6, status: "verified" },
-  { id: "3", name: "FreshDrop Delivery", area: "Whitefield", rating: 4.4, status: "pending" },
-];
+import { Star } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
+import { useQuery } from "@tanstack/react-query";
+import { motion } from "framer-motion";
 
 export default function AdminUsers() {
-  const { toast } = useToast();
+  const { data: profiles = [] } = useQuery({
+    queryKey: ["admin-profiles"],
+    queryFn: async () => {
+      const { data, error } = await supabase.from("profiles").select("*");
+      if (error) throw error;
+      return data;
+    },
+  });
+
+  const { data: suppliers = [] } = useQuery({
+    queryKey: ["admin-suppliers"],
+    queryFn: async () => {
+      const { data, error } = await supabase.from("suppliers").select("*");
+      if (error) throw error;
+      return data;
+    },
+  });
+
+  const { data: roles = [] } = useQuery({
+    queryKey: ["admin-roles"],
+    queryFn: async () => {
+      const { data, error } = await supabase.from("user_roles").select("*");
+      if (error) throw error;
+      return data;
+    },
+  });
+
+  const customerProfiles = profiles.filter(p =>
+    roles.some(r => r.user_id === p.user_id && r.role === "customer")
+  );
 
   return (
     <div className="space-y-6">
-      <div>
-        <h2 className="font-heading text-2xl font-bold mb-1">Users & Suppliers</h2>
-        <p className="text-muted-foreground text-sm">Manage all platform users.</p>
-      </div>
+      <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
+        <h2 className="font-heading text-3xl font-bold mb-1">Users & Suppliers</h2>
+        <p className="text-muted-foreground">Manage all platform users.</p>
+      </motion.div>
 
       <Tabs defaultValue="customers">
-        <TabsList>
-          <TabsTrigger value="customers">Customers ({customers.length})</TabsTrigger>
-          <TabsTrigger value="suppliers">Suppliers ({suppliersData.length})</TabsTrigger>
+        <TabsList className="rounded-xl">
+          <TabsTrigger value="customers" className="rounded-lg">Customers ({customerProfiles.length})</TabsTrigger>
+          <TabsTrigger value="suppliers" className="rounded-lg">Suppliers ({suppliers.length})</TabsTrigger>
         </TabsList>
 
         <TabsContent value="customers" className="space-y-3 mt-4">
-          {customers.map(c => (
-            <Card key={c.id}>
-              <CardContent className="flex items-center justify-between p-4">
+          {customerProfiles.length === 0 ? (
+            <p className="text-muted-foreground text-center py-8">No customers yet.</p>
+          ) : (
+            customerProfiles.map((c, i) => (
+              <motion.div key={c.id} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.05 }}
+                className="glass-card rounded-2xl p-4 flex items-center justify-between">
                 <div>
-                  <div className="flex items-center gap-2">
-                    <span className="font-medium">{c.name}</span>
-                    <Badge variant={c.status === "active" ? "default" : "destructive"}>{c.status}</Badge>
-                  </div>
-                  <p className="text-sm text-muted-foreground">{c.email} · {c.orders} orders</p>
+                  <span className="font-medium">{c.full_name || "Unnamed"}</span>
+                  <p className="text-sm text-muted-foreground">{c.phone || "No phone"}</p>
                 </div>
-                <Button size="sm" variant={c.status === "active" ? "destructive" : "default"}
-                  onClick={() => toast({ title: `User ${c.status === "active" ? "blocked" : "activated"}` })}>
-                  {c.status === "active" ? <><Ban className="h-3.5 w-3.5 mr-1" /> Block</> : <><UserCheck className="h-3.5 w-3.5 mr-1" /> Activate</>}
-                </Button>
-              </CardContent>
-            </Card>
-          ))}
+                <Badge className="rounded-lg">Customer</Badge>
+              </motion.div>
+            ))
+          )}
         </TabsContent>
 
         <TabsContent value="suppliers" className="space-y-3 mt-4">
-          {suppliersData.map(s => (
-            <Card key={s.id}>
-              <CardContent className="flex items-center justify-between p-4">
+          {suppliers.length === 0 ? (
+            <p className="text-muted-foreground text-center py-8">No suppliers yet.</p>
+          ) : (
+            suppliers.map((s, i) => (
+              <motion.div key={s.id} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.05 }}
+                className="glass-card rounded-2xl p-4 flex items-center justify-between">
                 <div>
-                  <div className="flex items-center gap-2">
-                    <span className="font-medium">{s.name}</span>
-                    <Badge variant={s.status === "verified" ? "default" : "secondary"}>{s.status}</Badge>
-                  </div>
+                  <span className="font-medium">{s.business_name}</span>
                   <div className="flex items-center gap-3 text-sm text-muted-foreground">
                     <span>{s.area}</span>
-                    <span className="flex items-center gap-1"><Star className="h-3.5 w-3.5 fill-warning text-warning" /> {s.rating}</span>
+                    <span className="flex items-center gap-1"><Star className="h-3.5 w-3.5 fill-warning text-warning" /> {Number(s.rating).toFixed(1)}</span>
+                    <span>Stock: {s.stock}</span>
                   </div>
                 </div>
-                {s.status === "pending" && (
-                  <Button size="sm" onClick={() => toast({ title: "Supplier verified!" })}>
-                    <UserCheck className="h-3.5 w-3.5 mr-1" /> Verify
-                  </Button>
-                )}
-              </CardContent>
-            </Card>
-          ))}
+                <Badge variant={s.available ? "default" : "secondary"} className="rounded-lg">
+                  {s.available ? "Active" : "Inactive"}
+                </Badge>
+              </motion.div>
+            ))
+          )}
         </TabsContent>
       </Tabs>
     </div>

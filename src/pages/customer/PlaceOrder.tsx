@@ -1,14 +1,15 @@
 import { useState } from "react";
 import { useSearchParams, useNavigate } from "react-router-dom";
-import { Minus, Plus, MapPin } from "lucide-react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Minus, Plus, MapPin, Droplets } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { motion } from "framer-motion";
 
 export default function PlaceOrder() {
   const [params] = useSearchParams();
@@ -63,67 +64,61 @@ export default function PlaceOrder() {
 
   return (
     <div className="max-w-lg mx-auto space-y-6">
-      <div>
-        <h2 className="font-heading text-2xl font-bold mb-1">Place Order</h2>
-        <p className="text-muted-foreground text-sm">Select a supplier and quantity to order.</p>
-      </div>
+      <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
+        <h2 className="font-heading text-3xl font-bold mb-1">Order a Tanker</h2>
+        <p className="text-muted-foreground">Select a supplier and quantity to place your order.</p>
+      </motion.div>
 
       <form onSubmit={handleOrder} className="space-y-5">
-        <Card>
-          <CardHeader className="pb-3"><CardTitle className="text-base">Supplier</CardTitle></CardHeader>
-          <CardContent>
-            <Select value={supplierId} onValueChange={setSupplierId}>
-              <SelectTrigger><SelectValue placeholder="Select a supplier" /></SelectTrigger>
-              <SelectContent>
-                {suppliers.map(s => (
-                  <SelectItem key={s.id} value={s.id}>{s.business_name} — ₹{Number(s.price_per_can)}/can</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </CardContent>
-        </Card>
+        <div className="glass-card rounded-2xl p-5 space-y-4">
+          <Label className="font-heading font-semibold">Select Supplier</Label>
+          <Select value={supplierId} onValueChange={setSupplierId}>
+            <SelectTrigger className="rounded-xl"><SelectValue placeholder="Choose a supplier" /></SelectTrigger>
+            <SelectContent>
+              {suppliers.map(s => (
+                <SelectItem key={s.id} value={s.id}>
+                  {s.business_name} — ₹{Number(s.price_per_can)}/can · {s.area}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
 
-        <Card>
-          <CardHeader className="pb-3"><CardTitle className="text-base">Quantity</CardTitle></CardHeader>
-          <CardContent>
-            <div className="flex items-center gap-4">
-              <Button type="button" variant="outline" size="icon" onClick={() => setQuantity(Math.max(supplier?.min_order || 1, quantity - 1))}><Minus className="h-4 w-4" /></Button>
-              <span className="text-2xl font-heading font-bold w-12 text-center">{quantity}</span>
-              <Button type="button" variant="outline" size="icon" onClick={() => setQuantity(quantity + 1)}><Plus className="h-4 w-4" /></Button>
-              <span className="text-sm text-muted-foreground">cans</span>
-            </div>
-            {supplier && <p className="text-xs text-muted-foreground mt-2">Min order: {supplier.min_order} can(s)</p>}
-          </CardContent>
-        </Card>
+        <div className="glass-card rounded-2xl p-5 space-y-4">
+          <Label className="font-heading font-semibold">Quantity (Cans)</Label>
+          <div className="flex items-center gap-4">
+            <Button type="button" variant="outline" size="icon" className="rounded-xl" onClick={() => setQuantity(Math.max(supplier?.min_order || 1, quantity - 1))}><Minus className="h-4 w-4" /></Button>
+            <span className="text-3xl font-heading font-bold w-14 text-center">{quantity}</span>
+            <Button type="button" variant="outline" size="icon" className="rounded-xl" onClick={() => setQuantity(quantity + 1)}><Plus className="h-4 w-4" /></Button>
+            <span className="text-sm text-muted-foreground">cans</span>
+          </div>
+          {supplier && <p className="text-xs text-muted-foreground">Min order: {supplier.min_order} can(s) · Stock: {supplier.stock}</p>}
+        </div>
 
-        <Card>
-          <CardHeader className="pb-3"><CardTitle className="text-base">Delivery Address</CardTitle></CardHeader>
-          <CardContent>
-            <div className="relative">
-              <MapPin className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-              <Input placeholder="Enter your delivery address" className="pl-10" value={address} onChange={e => setAddress(e.target.value)} required />
-            </div>
-          </CardContent>
-        </Card>
+        <div className="glass-card rounded-2xl p-5 space-y-4">
+          <Label className="font-heading font-semibold">Delivery Address</Label>
+          <div className="relative">
+            <MapPin className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+            <Input placeholder="Full delivery address with area & city" className="pl-10 rounded-xl" value={address} onChange={e => setAddress(e.target.value)} required />
+          </div>
+        </div>
 
         {supplier && (
-          <Card className="border-primary/30 bg-primary/5">
-            <CardContent className="p-5">
-              <div className="flex justify-between items-center">
-                <div>
-                  <p className="text-sm text-muted-foreground">Order Summary</p>
-                  <p className="font-medium">{quantity} × ₹{Number(supplier.price_per_can)}</p>
-                </div>
-                <div className="text-right">
-                  <p className="text-sm text-muted-foreground">Total</p>
-                  <p className="text-2xl font-heading font-bold text-primary">₹{total}</p>
-                </div>
+          <div className="rounded-2xl bg-gradient-to-r from-primary/10 to-accent/10 p-5 border border-primary/20">
+            <div className="flex justify-between items-center">
+              <div>
+                <p className="text-sm text-muted-foreground">Order Summary</p>
+                <p className="font-medium">{quantity} × ₹{Number(supplier.price_per_can)}</p>
               </div>
-            </CardContent>
-          </Card>
+              <div className="text-right">
+                <p className="text-sm text-muted-foreground">Total</p>
+                <p className="text-3xl font-heading font-bold text-primary">₹{total}</p>
+              </div>
+            </div>
+          </div>
         )}
 
-        <Button type="submit" className="w-full" size="lg" disabled={!supplierId || !address || loading}>
+        <Button type="submit" className="w-full rounded-xl" size="lg" disabled={!supplierId || !address || loading}>
           {loading ? "Placing order..." : `Place Order — ₹${total}`}
         </Button>
       </form>
