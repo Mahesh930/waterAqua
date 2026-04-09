@@ -59,6 +59,39 @@ export type Database = {
           },
         ]
       }
+      notifications: {
+        Row: {
+          created_at: string
+          id: string
+          message: string
+          read: boolean
+          reference_id: string | null
+          title: string
+          type: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          message: string
+          read?: boolean
+          reference_id?: string | null
+          title: string
+          type?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          message?: string
+          read?: boolean
+          reference_id?: string | null
+          title?: string
+          type?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       orders: {
         Row: {
           created_at: string
@@ -140,6 +173,7 @@ export type Database = {
         Row: {
           area: string
           available: boolean
+          blocked: boolean
           business_name: string
           created_at: string
           delivery_time: string
@@ -156,6 +190,7 @@ export type Database = {
         Insert: {
           area: string
           available?: boolean
+          blocked?: boolean
           business_name: string
           created_at?: string
           delivery_time?: string
@@ -172,6 +207,7 @@ export type Database = {
         Update: {
           area?: string
           available?: boolean
+          blocked?: boolean
           business_name?: string
           created_at?: string
           delivery_time?: string

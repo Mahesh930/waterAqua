@@ -1,24 +1,50 @@
 
-## AquaHome — Water Delivery Platform V1
+## Remaining PRD Features to Implement
 
-### What we'll build now (Frontend UI):
-1. **Design System** — Fresh aqua/blue theme, clean modern aesthetic inspired by delivery apps like Swiggy/Uber Eats
-2. **Landing Page** — Hero section, how it works, features overview
-3. **Auth Pages** — Login & Register (UI only, will connect to Lovable Cloud next)
-4. **Customer Flow** — Browse suppliers, supplier detail, place order, order tracking, order history
-5. **Supplier Dashboard** — Incoming orders, accept/reject, update status, profile management
-6. **Admin Dashboard** — Analytics overview, user management, order monitoring
+### Already Built ✅
+- Register/Login (Customer & Supplier)
+- Browse suppliers with location filter
+- Place orders, view order history
+- Supplier profile management, inventory/stock
+- Accept/reject/dispatch/deliver orders
+- Feedback & rating system
+- Admin overview, users list, all orders view
 
-### Design Direction:
-- **Colors**: Ocean blue primary (#0EA5E9), deep navy dark, fresh white backgrounds, teal accents
-- **Font**: Plus Jakarta Sans (headings) + Inter (body)
-- **Style**: Clean, modern, card-based UI with subtle shadows and smooth animations
-- **Vibe**: Fresh, trustworthy, professional — like a premium delivery service
+### Missing Features to Add 🔧
 
-### What comes next (Phase 2):
-- Enable Lovable Cloud for database, auth, and real data
-- Payment integration
-- Real-time notifications
-- GPS tracking simulation
+#### 1. Customer: Cancel/Modify Order (before dispatch)
+- Add "Cancel Order" button on orders with status `placed` or `confirmed`
+- Update order status to `cancelled`
 
-All screens use mock/demo data so you can see the full flow immediately.
+#### 2. Customer: Real-Time Order Tracking
+- Enable Supabase Realtime on orders table
+- Show live status updates without page refresh
+
+#### 3. Customer: Download Payment Receipt
+- Generate a downloadable receipt (HTML-to-print) for delivered orders
+
+#### 4. Supplier: Payment History Page
+- New page showing all delivered orders with revenue breakdown
+- Monthly totals
+
+#### 5. Supplier: Monthly Order Reports
+- Summary cards: monthly orders, revenue, avg rating
+- Filterable by month
+
+#### 6. Admin: Analytics Dashboard with Charts
+- Revenue trends (line chart via Recharts)
+- Orders per day/month (bar chart)
+- Top-rated suppliers list
+- Customer satisfaction metrics (avg rating)
+
+#### 7. Admin: User Management Actions
+- Block/unblock suppliers
+- View supplier verification status
+
+#### 8. In-App Notification System
+- Notification bell in nav bar
+- Store notifications in a new `notifications` table
+- Show order status change alerts
+
+#### 9. Supplier: View Customer Feedback with Names
+- Show customer name alongside feedback on supplier profile
