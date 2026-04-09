@@ -177,14 +177,17 @@ export type Database = {
           business_name: string
           created_at: string
           delivery_time: string
+          driver_phone: string | null
           id: string
           min_order: number
           price_per_can: number
           rating: number
           review_count: number
           stock: number
+          tanker_capacity: number
           updated_at: string
           user_id: string
+          vehicle_number: string | null
           water_type: string
         }
         Insert: {
@@ -194,14 +197,17 @@ export type Database = {
           business_name: string
           created_at?: string
           delivery_time?: string
+          driver_phone?: string | null
           id?: string
           min_order?: number
           price_per_can?: number
           rating?: number
           review_count?: number
           stock?: number
+          tanker_capacity?: number
           updated_at?: string
           user_id: string
+          vehicle_number?: string | null
           water_type?: string
         }
         Update: {
@@ -211,14 +217,17 @@ export type Database = {
           business_name?: string
           created_at?: string
           delivery_time?: string
+          driver_phone?: string | null
           id?: string
           min_order?: number
           price_per_can?: number
           rating?: number
           review_count?: number
           stock?: number
+          tanker_capacity?: number
           updated_at?: string
           user_id?: string
+          vehicle_number?: string | null
           water_type?: string
         }
         Relationships: []
