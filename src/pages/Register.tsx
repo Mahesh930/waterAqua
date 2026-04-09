@@ -12,6 +12,7 @@ export default function Register() {
   const initialRole = searchParams.get("role") === "supplier" ? "supplier" : "customer";
   const [role, setRole] = useState<"customer" | "supplier">(initialRole);
   const [name, setName] = useState("");
+  const [referralInput, setReferralInput] = useState("");
   const [phone, setPhone] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
