@@ -381,7 +381,7 @@ export default function PlaceOrder() {
                             <div className="flex items-center gap-2 text-xs text-muted-foreground mt-0.5">
                               <span className="flex items-center gap-0.5"><MapPin className="h-3 w-3" />{s.area}</span>
                               <span>·</span>
-                              <span className="flex items-center gap-0.5"><Clock className="h-3 w-3" />{s.delivery_time}</span>
+                              <span className="flex items-center gap-0.5"><Clock className="h-3 w-3" /><span className="text-primary font-semibold">{eta.label}</span></span>
                             </div>
                             <div className="flex items-center gap-2 mt-1">
                               <div className="flex items-center gap-0.5">
