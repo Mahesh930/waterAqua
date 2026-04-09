@@ -1,6 +1,6 @@
 import { ReactNode, useState, useEffect } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
-import { Droplets, LogOut, Menu, X, Bell } from "lucide-react";
+import { Droplets, LogOut, Menu, X, Bell, Moon, Sun } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
@@ -9,6 +9,21 @@ import { motion, AnimatePresence } from "framer-motion";
 
 interface NavItem { label: string; path: string; icon: ReactNode; }
 interface Props { children: ReactNode; navItems: NavItem[]; title: string; }
+
+function useTheme() {
+  const [dark, setDark] = useState(() => {
+    if (typeof window === "undefined") return false;
+    return localStorage.getItem("theme") === "dark" ||
+      (!localStorage.getItem("theme") && window.matchMedia("(prefers-color-scheme: dark)").matches);
+  });
+
+  useEffect(() => {
+    document.documentElement.classList.toggle("dark", dark);
+    localStorage.setItem("theme", dark ? "dark" : "light");
+  }, [dark]);
+
+  return { dark, toggle: () => setDark(d => !d) };
+}
 
 function NotificationPanel({ userId }: { userId: string }) {
   const queryClient = useQueryClient();
@@ -67,6 +82,7 @@ export default function DashboardLayout({ children, navItems, title }: Props) {
   const navigate = useNavigate();
   const { signOut, profile, user } = useAuth();
   const queryClient = useQueryClient();
+  const { dark, toggle } = useTheme();
 
   const { data: unreadCount = 0 } = useQuery({
     queryKey: ["unread-notifications", user?.id],
@@ -83,7 +99,6 @@ export default function DashboardLayout({ children, navItems, title }: Props) {
     refetchInterval: 15000,
   });
 
-  // Real-time notification updates
   useEffect(() => {
     if (!user) return;
     const channel = supabase
@@ -125,10 +140,25 @@ export default function DashboardLayout({ children, navItems, title }: Props) {
               })}
             </div>
 
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-1.5">
+              {/* Dark mode toggle */}
+              <Button variant="ghost" size="icon" onClick={toggle} className="relative h-9 w-9">
+                <AnimatePresence mode="wait">
+                  {dark ? (
+                    <motion.div key="sun" initial={{ rotate: -90, opacity: 0 }} animate={{ rotate: 0, opacity: 1 }} exit={{ rotate: 90, opacity: 0 }} transition={{ duration: 0.15 }}>
+                      <Sun className="h-4 w-4" />
+                    </motion.div>
+                  ) : (
+                    <motion.div key="moon" initial={{ rotate: 90, opacity: 0 }} animate={{ rotate: 0, opacity: 1 }} exit={{ rotate: -90, opacity: 0 }} transition={{ duration: 0.15 }}>
+                      <Moon className="h-4 w-4" />
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+              </Button>
+
               {/* Notification bell */}
               <div className="relative">
-                <Button variant="ghost" size="icon" className="relative" onClick={() => setNotifOpen(!notifOpen)}>
+                <Button variant="ghost" size="icon" className="relative h-9 w-9" onClick={() => setNotifOpen(!notifOpen)}>
                   <Bell className="h-4 w-4" />
                   {unreadCount > 0 && (
                     <span className="absolute -top-0.5 -right-0.5 h-4 w-4 rounded-full bg-destructive text-destructive-foreground text-[10px] font-bold flex items-center justify-center">
@@ -142,12 +172,12 @@ export default function DashboardLayout({ children, navItems, title }: Props) {
               </div>
 
               {profile?.full_name && (
-                <span className="hidden sm:block text-sm text-muted-foreground">{profile.full_name}</span>
+                <span className="hidden sm:block text-sm text-muted-foreground max-w-[100px] truncate">{profile.full_name}</span>
               )}
               <Button variant="ghost" size="sm" onClick={handleLogout} className="gap-2 text-muted-foreground hover:text-foreground">
                 <LogOut className="h-4 w-4" /> <span className="hidden sm:inline">Log Out</span>
               </Button>
-              <Button variant="ghost" size="icon" className="md:hidden" onClick={() => setMobileOpen(!mobileOpen)}>
+              <Button variant="ghost" size="icon" className="md:hidden h-9 w-9" onClick={() => setMobileOpen(!mobileOpen)}>
                 {mobileOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
               </Button>
             </div>
@@ -178,7 +208,6 @@ export default function DashboardLayout({ children, navItems, title }: Props) {
 
       <main className="pt-20 pb-8 px-4 max-w-7xl mx-auto">{children}</main>
 
-      {/* Click outside to close notification panel */}
       {notifOpen && <div className="fixed inset-0 z-40" onClick={() => setNotifOpen(false)} />}
     </div>
   );
