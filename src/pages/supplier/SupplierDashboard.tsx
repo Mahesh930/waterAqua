@@ -1,4 +1,4 @@
-import { Package, ClipboardList, User, Star } from "lucide-react";
+import { Package, ClipboardList, User } from "lucide-react";
 import DashboardLayout from "@/components/DashboardLayout";
 import { Routes, Route } from "react-router-dom";
 import SupplierHome from "./SupplierHome";
@@ -7,7 +7,7 @@ import SupplierProfile from "./SupplierProfile";
 
 const navItems = [
   { label: "Dashboard", path: "/supplier", icon: <Package className="h-4 w-4" /> },
-  { label: "Manage Orders", path: "/supplier/orders", icon: <ClipboardList className="h-4 w-4" /> },
+  { label: "Orders", path: "/supplier/orders", icon: <ClipboardList className="h-4 w-4" /> },
   { label: "Profile", path: "/supplier/profile", icon: <User className="h-4 w-4" /> },
 ];
 

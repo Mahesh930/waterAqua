@@ -1,4 +1,4 @@
-import { LayoutDashboard, Users, Package, Settings } from "lucide-react";
+import { LayoutDashboard, Users, Package } from "lucide-react";
 import DashboardLayout from "@/components/DashboardLayout";
 import { Routes, Route } from "react-router-dom";
 import AdminOverview from "./AdminOverview";
@@ -7,7 +7,7 @@ import AdminOrders from "./AdminOrders";
 
 const navItems = [
   { label: "Overview", path: "/admin", icon: <LayoutDashboard className="h-4 w-4" /> },
-  { label: "Users & Suppliers", path: "/admin/users", icon: <Users className="h-4 w-4" /> },
+  { label: "Users", path: "/admin/users", icon: <Users className="h-4 w-4" /> },
   { label: "Orders", path: "/admin/orders", icon: <Package className="h-4 w-4" /> },
 ];
 

@@ -6,23 +6,23 @@
 
 @layer base {
   :root {
-    --background: 210 20% 98%;
-    --foreground: 215 25% 12%;
+    --background: 220 20% 97%;
+    --foreground: 220 25% 10%;
 
     --card: 0 0% 100%;
-    --card-foreground: 215 25% 12%;
+    --card-foreground: 220 25% 10%;
 
     --popover: 0 0% 100%;
-    --popover-foreground: 215 25% 12%;
+    --popover-foreground: 220 25% 10%;
 
-    --primary: 199 89% 48%;
+    --primary: 210 100% 52%;
     --primary-foreground: 0 0% 100%;
 
-    --secondary: 199 30% 94%;
-    --secondary-foreground: 199 89% 30%;
+    --secondary: 210 30% 93%;
+    --secondary-foreground: 210 80% 35%;
 
-    --muted: 210 15% 95%;
-    --muted-foreground: 215 15% 47%;
+    --muted: 220 14% 94%;
+    --muted-foreground: 220 10% 46%;
 
     --accent: 172 66% 50%;
     --accent-foreground: 0 0% 100%;
@@ -30,9 +30,9 @@
     --destructive: 0 84% 60%;
     --destructive-foreground: 0 0% 100%;
 
-    --border: 214 20% 90%;
-    --input: 214 20% 90%;
-    --ring: 199 89% 48%;
+    --border: 220 13% 91%;
+    --input: 220 13% 91%;
+    --ring: 210 100% 52%;
 
     --radius: 0.75rem;
 
@@ -41,47 +41,54 @@
     --warning: 38 92% 50%;
     --warning-foreground: 0 0% 100%;
 
-    --sidebar-background: 210 20% 98%;
-    --sidebar-foreground: 215 25% 12%;
-    --sidebar-primary: 199 89% 48%;
+    --glass-bg: 0 0% 100% / 0.7;
+    --glass-border: 0 0% 100% / 0.3;
+
+    --sidebar-background: 220 20% 97%;
+    --sidebar-foreground: 220 25% 10%;
+    --sidebar-primary: 210 100% 52%;
     --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 199 30% 94%;
-    --sidebar-accent-foreground: 199 89% 30%;
-    --sidebar-border: 214 20% 90%;
-    --sidebar-ring: 199 89% 48%;
+    --sidebar-accent: 210 30% 93%;
+    --sidebar-accent-foreground: 210 80% 35%;
+    --sidebar-border: 220 13% 91%;
+    --sidebar-ring: 210 100% 52%;
 
     --font-heading: 'Plus Jakarta Sans', sans-serif;
     --font-body: 'Inter', sans-serif;
   }
 
   .dark {
-    --background: 215 28% 7%;
-    --foreground: 210 20% 95%;
-    --card: 215 25% 11%;
-    --card-foreground: 210 20% 95%;
-    --popover: 215 25% 11%;
-    --popover-foreground: 210 20% 95%;
-    --primary: 199 89% 48%;
+    --background: 222 47% 6%;
+    --foreground: 210 40% 96%;
+    --card: 222 40% 10%;
+    --card-foreground: 210 40% 96%;
+    --popover: 222 40% 10%;
+    --popover-foreground: 210 40% 96%;
+    --primary: 210 100% 52%;
     --primary-foreground: 0 0% 100%;
-    --secondary: 199 30% 15%;
-    --secondary-foreground: 199 60% 70%;
-    --muted: 215 20% 15%;
-    --muted-foreground: 215 15% 60%;
+    --secondary: 210 30% 15%;
+    --secondary-foreground: 210 60% 70%;
+    --muted: 222 30% 14%;
+    --muted-foreground: 220 15% 55%;
     --accent: 172 66% 50%;
     --accent-foreground: 0 0% 100%;
     --destructive: 0 62% 30%;
     --destructive-foreground: 210 40% 98%;
-    --border: 215 20% 18%;
-    --input: 215 20% 18%;
-    --ring: 199 89% 48%;
-    --sidebar-background: 215 28% 7%;
-    --sidebar-foreground: 210 20% 95%;
-    --sidebar-primary: 199 89% 48%;
+    --border: 222 20% 18%;
+    --input: 222 20% 18%;
+    --ring: 210 100% 52%;
+
+    --glass-bg: 222 40% 10% / 0.6;
+    --glass-border: 0 0% 100% / 0.08;
+
+    --sidebar-background: 222 47% 6%;
+    --sidebar-foreground: 210 40% 96%;
+    --sidebar-primary: 210 100% 52%;
     --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 199 30% 15%;
-    --sidebar-accent-foreground: 199 60% 70%;
-    --sidebar-border: 215 20% 18%;
-    --sidebar-ring: 199 89% 48%;
+    --sidebar-accent: 210 30% 15%;
+    --sidebar-accent-foreground: 210 60% 70%;
+    --sidebar-border: 222 20% 18%;
+    --sidebar-ring: 210 100% 52%;
   }
 }
 
@@ -103,6 +110,23 @@
     @apply bg-clip-text text-transparent bg-gradient-to-r from-primary to-accent;
   }
   .glass {
-    @apply bg-card/80 backdrop-blur-lg border border-border/50;
+    background: hsl(var(--glass-bg));
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border: 1px solid hsl(var(--glass-border));
+  }
+  .glass-card {
+    background: hsl(var(--glass-bg));
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    border: 1px solid hsl(var(--glass-border));
+    box-shadow: 0 8px 32px 0 hsl(210 100% 52% / 0.06);
+  }
+  .glass-strong {
+    background: hsl(var(--glass-bg));
+    backdrop-filter: blur(40px);
+    -webkit-backdrop-filter: blur(40px);
+    border: 1px solid hsl(var(--glass-border));
+    box-shadow: 0 8px 32px 0 hsl(0 0% 0% / 0.08);
   }
 }

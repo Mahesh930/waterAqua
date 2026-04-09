@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
-import { Droplets, Mail, Lock, Eye, EyeOff, User, Phone } from "lucide-react";
+import { Droplets, Mail, Lock, Eye, EyeOff, User, Phone, MapPin } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -16,6 +16,7 @@ export default function Register() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [area, setArea] = useState("");
+  const [city, setCity] = useState("");
   const [showPw, setShowPw] = useState(false);
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
@@ -25,7 +26,6 @@ export default function Register() {
     e.preventDefault();
     setLoading(true);
 
-    // 1. Sign up
     const { data, error } = await supabase.auth.signUp({
       email,
       password,
@@ -48,98 +48,116 @@ export default function Register() {
       return;
     }
 
-    // 2. Update profile with phone
     await supabase.from("profiles").update({ phone, full_name: name }).eq("user_id", userId);
-
-    // 3. Assign role
     await supabase.from("user_roles").insert({ user_id: userId, role });
 
-    // 4. If supplier, create supplier listing
     if (role === "supplier") {
+      const serviceArea = city ? `${area}, ${city}` : area;
       await supabase.from("suppliers").insert({
         user_id: userId,
         business_name: name,
-        area,
+        area: serviceArea,
         water_type: "RO Purified",
       });
     }
 
-    toast({ title: "Account created!", description: `Registered as ${role}. Check your email to verify.` });
+    toast({ title: "Account created!", description: `Registered as ${role}.` });
     navigate("/login");
     setLoading(false);
   };
 
   return (
-    <div className="min-h-screen flex">
-      <div className="hidden lg:flex flex-1 bg-gradient-to-br from-accent to-primary items-center justify-center p-12">
-        <div className="text-primary-foreground max-w-md">
-          <Droplets className="h-12 w-12 mb-6" />
-          <h1 className="font-heading text-4xl font-bold mb-4">Join AquaHome Today</h1>
-          <p className="text-primary-foreground/80">Whether you're looking for clean water delivery or want to grow your water supply business, we've got you covered.</p>
-        </div>
-      </div>
-      <div className="flex-1 flex items-center justify-center p-8">
-        <div className="w-full max-w-md">
-          <Link to="/" className="flex items-center gap-2 mb-8 lg:hidden">
-            <Droplets className="h-7 w-7 text-primary" />
+    <div className="min-h-screen flex items-center justify-center p-4 relative overflow-hidden">
+      <div className="absolute inset-0 bg-gradient-to-br from-accent/8 via-background to-primary/8" />
+      <div className="absolute top-20 right-20 w-72 h-72 bg-accent/10 rounded-full blur-3xl" />
+      <div className="absolute bottom-20 left-20 w-96 h-96 bg-primary/10 rounded-full blur-3xl" />
+
+      <div className="w-full max-w-md relative">
+        <div className="glass-card rounded-3xl p-8">
+          <Link to="/" className="flex items-center gap-2.5 mb-6 justify-center">
+            <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-primary to-accent flex items-center justify-center">
+              <Droplets className="h-5 w-5 text-primary-foreground" />
+            </div>
             <span className="font-heading font-bold text-xl">AquaHome</span>
           </Link>
-          <h2 className="font-heading text-2xl font-bold mb-1">Create Account</h2>
-          <p className="text-muted-foreground text-sm mb-6">Sign up to start ordering or delivering water.</p>
 
-          <div className="flex gap-1 p-1 bg-muted rounded-lg mb-6">
+          <h2 className="font-heading text-2xl font-bold mb-1 text-center">Create Account</h2>
+          <p className="text-muted-foreground text-sm mb-5 text-center">Sign up to order or deliver water tankers.</p>
+
+          <div className="flex gap-1 p-1 rounded-xl bg-muted/60 mb-5">
             {(["customer", "supplier"] as const).map(r => (
               <button key={r} onClick={() => setRole(r)}
-                className={`flex-1 text-sm py-2 rounded-md font-medium capitalize transition-colors ${role === r ? "bg-card text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"}`}>
-                {r}
+                className={`flex-1 text-sm py-2.5 rounded-lg font-medium capitalize transition-all duration-200 ${
+                  role === r ? "bg-card text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"
+                }`}>
+                {r === "customer" ? "🚰 Customer" : "🚛 Supplier"}
               </button>
             ))}
           </div>
 
-          <form onSubmit={handleRegister} className="space-y-4">
+          <form onSubmit={handleRegister} className="space-y-3.5">
             <div>
               <Label htmlFor="name">{role === "supplier" ? "Business Name" : "Full Name"}</Label>
               <div className="relative mt-1">
                 <User className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                <Input id="name" placeholder={role === "supplier" ? "Your Business Name" : "John Doe"} className="pl-10" value={name} onChange={e => setName(e.target.value)} required />
+                <Input id="name" placeholder={role === "supplier" ? "Business Name" : "John Doe"} className="pl-10 rounded-xl" value={name} onChange={e => setName(e.target.value)} required />
               </div>
             </div>
             <div>
               <Label htmlFor="phone">Phone Number</Label>
               <div className="relative mt-1">
                 <Phone className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                <Input id="phone" type="tel" placeholder="+91 98765 43210" className="pl-10" value={phone} onChange={e => setPhone(e.target.value)} required />
+                <Input id="phone" type="tel" placeholder="+91 98765 43210" className="pl-10 rounded-xl" value={phone} onChange={e => setPhone(e.target.value)} required />
               </div>
             </div>
             <div>
               <Label htmlFor="email">Email</Label>
               <div className="relative mt-1">
                 <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                <Input id="email" type="email" placeholder="you@example.com" className="pl-10" value={email} onChange={e => setEmail(e.target.value)} required />
+                <Input id="email" type="email" placeholder="you@example.com" className="pl-10 rounded-xl" value={email} onChange={e => setEmail(e.target.value)} required />
               </div>
             </div>
             <div>
               <Label htmlFor="password">Password</Label>
               <div className="relative mt-1">
                 <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                <Input id="password" type={showPw ? "text" : "password"} placeholder="••••••••" className="pl-10 pr-10" value={password} onChange={e => setPassword(e.target.value)} required />
+                <Input id="password" type={showPw ? "text" : "password"} placeholder="••••••••" className="pl-10 pr-10 rounded-xl" value={password} onChange={e => setPassword(e.target.value)} required />
                 <button type="button" className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground" onClick={() => setShowPw(!showPw)}>
                   {showPw ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                 </button>
               </div>
             </div>
             {role === "supplier" && (
+              <>
+                <div>
+                  <Label htmlFor="area">Service Area</Label>
+                  <div className="relative mt-1">
+                    <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                    <Input id="area" placeholder="e.g. Koramangala" className="pl-10 rounded-xl" value={area} onChange={e => setArea(e.target.value)} required />
+                  </div>
+                </div>
+                <div>
+                  <Label htmlFor="city">City</Label>
+                  <Input id="city" placeholder="e.g. Bangalore" className="rounded-xl mt-1" value={city} onChange={e => setCity(e.target.value)} required />
+                </div>
+              </>
+            )}
+            {role === "customer" && (
               <div>
-                <Label htmlFor="area">Service Area</Label>
-                <Input id="area" placeholder="e.g. Koramangala, Bangalore" className="mt-1" value={area} onChange={e => setArea(e.target.value)} required />
+                <Label htmlFor="location">Your City / Area</Label>
+                <div className="relative mt-1">
+                  <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <Input id="location" placeholder="e.g. Koramangala, Bangalore" className="pl-10 rounded-xl" value={area} onChange={e => setArea(e.target.value)} />
+                </div>
+                <p className="text-xs text-muted-foreground mt-1">Helps us find nearby tanker suppliers</p>
               </div>
             )}
-            <Button type="submit" className="w-full" disabled={loading}>
+            <Button type="submit" className="w-full rounded-xl" disabled={loading}>
               {loading ? "Creating account..." : "Create Account"}
             </Button>
           </form>
 
-          <p className="text-center text-sm text-muted-foreground mt-6">
+          <p className="text-center text-sm text-muted-foreground mt-5">
             Already have an account? <Link to="/login" className="text-primary font-medium hover:underline">Log In</Link>
           </p>
         </div>
