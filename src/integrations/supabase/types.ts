@@ -99,6 +99,7 @@ export type Database = {
           delivery_address: string | null
           delivery_time: string | null
           id: string
+          pincode: string | null
           quantity: number
           status: Database["public"]["Enums"]["order_status"]
           supplier_id: string
@@ -111,6 +112,7 @@ export type Database = {
           delivery_address?: string | null
           delivery_time?: string | null
           id?: string
+          pincode?: string | null
           quantity: number
           status?: Database["public"]["Enums"]["order_status"]
           supplier_id: string
@@ -123,6 +125,7 @@ export type Database = {
           delivery_address?: string | null
           delivery_time?: string | null
           id?: string
+          pincode?: string | null
           quantity?: number
           status?: Database["public"]["Enums"]["order_status"]
           supplier_id?: string
@@ -180,7 +183,9 @@ export type Database = {
           driver_phone: string | null
           id: string
           min_order: number
+          pincode: string | null
           price_per_can: number
+          price_per_tanker: number
           rating: number
           review_count: number
           stock: number
@@ -200,7 +205,9 @@ export type Database = {
           driver_phone?: string | null
           id?: string
           min_order?: number
+          pincode?: string | null
           price_per_can?: number
+          price_per_tanker?: number
           rating?: number
           review_count?: number
           stock?: number
@@ -220,7 +227,9 @@ export type Database = {
           driver_phone?: string | null
           id?: string
           min_order?: number
+          pincode?: string | null
           price_per_can?: number
+          price_per_tanker?: number
           rating?: number
           review_count?: number
           stock?: number
