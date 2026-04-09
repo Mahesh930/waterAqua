@@ -81,15 +81,14 @@ export default function PlaceOrder() {
   }, [preselected, preType]);
 
   // Matching suppliers for pincode
+  // Strict pincode filtering: only show suppliers matching customer's pincode/area
   const matchedSuppliers = useMemo(() => {
-    if (!pincodeData) return suppliers;
+    if (!pincodeData || pincode.length !== 6) return [];
     return suppliers.filter(s => {
-      const sPin = (s as any).pincode;
-      if (sPin === pincode) return true;
+      if (s.pincode === pincode) return true;
       const area = s.area.toLowerCase();
       return area.includes(pincodeData.city.toLowerCase()) || 
-             area.includes(pincodeData.area.toLowerCase()) ||
-             area.includes(pincodeData.district.toLowerCase());
+             area.includes(pincodeData.area.toLowerCase());
     });
   }, [suppliers, pincodeData, pincode]);
 
