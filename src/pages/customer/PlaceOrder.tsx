@@ -388,8 +388,8 @@ export default function PlaceOrder() {
                                 <span className="text-xs font-medium">{Number(s.rating).toFixed(1)}</span>
                               </div>
                               <Badge variant="outline" className="text-[10px] rounded-md">{s.water_type}</Badge>
-                              {(s as any).tanker_capacity && orderType === "tanker" && (
-                                <Badge variant="outline" className="text-[10px] rounded-md">{(s as any).tanker_capacity}L</Badge>
+                              {s.tanker_capacity && orderType === "tanker" && (
+                                <Badge variant="outline" className="text-[10px] rounded-md">{s.tanker_capacity}L</Badge>
                               )}
                             </div>
                           </div>
