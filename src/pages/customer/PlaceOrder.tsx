@@ -360,7 +360,9 @@ export default function PlaceOrder() {
                 </div>
               ) : (
                 matchedSuppliers.map(s => {
-                  const price = orderType === "tanker" ? Number((s as any).price_per_tanker || 500) : Number(s.price_per_can);
+                  const price = orderType === "tanker" ? Number(s.price_per_tanker) : Number(s.price_per_can);
+                  const eta = estimateDeliveryTime(s.pincode, pincode);
+                  const isSelected = supplierId === s.id;
                   const isSelected = supplierId === s.id;
                   return (
                     <motion.button key={s.id}
