@@ -1,9 +1,10 @@
+import { useEffect } from "react";
 import { Link } from "react-router-dom";
 import { ShoppingBag, Truck, Clock, ArrowRight, Droplets } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { motion } from "framer-motion";
 
 const statusColors: Record<string, string> = {
@@ -24,6 +25,7 @@ const statusLabels: Record<string, string> = {
 
 export default function CustomerHome() {
   const { user, profile } = useAuth();
+  const queryClient = useQueryClient();
 
   const { data: orders = [] } = useQuery({
     queryKey: ["customer-orders", user?.id],
@@ -38,6 +40,17 @@ export default function CustomerHome() {
     },
     enabled: !!user,
   });
+
+  // Real-time order updates
+  useEffect(() => {
+    if (!user) return;
+    const channel = supabase
+      .channel("customer-home-realtime")
+      .on("postgres_changes", { event: "*", schema: "public", table: "orders", filter: `customer_id=eq.${user.id}` },
+        () => { queryClient.invalidateQueries({ queryKey: ["customer-orders"] }); }
+      ).subscribe();
+    return () => { supabase.removeChannel(channel); };
+  }, [user, queryClient]);
 
   const activeOrders = orders.filter(o => o.status !== "delivered" && o.status !== "cancelled");
 
