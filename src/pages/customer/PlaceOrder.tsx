@@ -5,6 +5,7 @@ import {
   ChevronRight, ChevronLeft, CheckCircle2, Phone, Package, Loader2,
   Minus, Plus, Info
 } from "lucide-react";
+import { estimateDeliveryTime } from "@/lib/delivery-estimate";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -80,21 +81,20 @@ export default function PlaceOrder() {
   }, [preselected, preType]);
 
   // Matching suppliers for pincode
+  // Strict pincode filtering: only show suppliers matching customer's pincode/area
   const matchedSuppliers = useMemo(() => {
-    if (!pincodeData) return suppliers;
+    if (!pincodeData || pincode.length !== 6) return [];
     return suppliers.filter(s => {
-      const sPin = (s as any).pincode;
-      if (sPin === pincode) return true;
+      if (s.pincode === pincode) return true;
       const area = s.area.toLowerCase();
       return area.includes(pincodeData.city.toLowerCase()) || 
-             area.includes(pincodeData.area.toLowerCase()) ||
-             area.includes(pincodeData.district.toLowerCase());
+             area.includes(pincodeData.area.toLowerCase());
     });
   }, [suppliers, pincodeData, pincode]);
 
   const supplier = suppliers.find(s => s.id === supplierId);
   const unitPrice = supplier
-    ? orderType === "tanker" ? Number((supplier as any).price_per_tanker || 500) : Number(supplier.price_per_can)
+    ? orderType === "tanker" ? Number(supplier.price_per_tanker) : Number(supplier.price_per_can)
     : 0;
   const total = unitPrice * quantity;
 
@@ -360,7 +360,8 @@ export default function PlaceOrder() {
                 </div>
               ) : (
                 matchedSuppliers.map(s => {
-                  const price = orderType === "tanker" ? Number((s as any).price_per_tanker || 500) : Number(s.price_per_can);
+                  const price = orderType === "tanker" ? Number(s.price_per_tanker) : Number(s.price_per_can);
+                  const eta = estimateDeliveryTime(s.pincode, pincode);
                   const isSelected = supplierId === s.id;
                   return (
                     <motion.button key={s.id}
@@ -379,7 +380,7 @@ export default function PlaceOrder() {
                             <div className="flex items-center gap-2 text-xs text-muted-foreground mt-0.5">
                               <span className="flex items-center gap-0.5"><MapPin className="h-3 w-3" />{s.area}</span>
                               <span>·</span>
-                              <span className="flex items-center gap-0.5"><Clock className="h-3 w-3" />{s.delivery_time}</span>
+                              <span className="flex items-center gap-0.5"><Clock className="h-3 w-3" /><span className="text-primary font-semibold">{eta.label}</span></span>
                             </div>
                             <div className="flex items-center gap-2 mt-1">
                               <div className="flex items-center gap-0.5">
@@ -387,8 +388,8 @@ export default function PlaceOrder() {
                                 <span className="text-xs font-medium">{Number(s.rating).toFixed(1)}</span>
                               </div>
                               <Badge variant="outline" className="text-[10px] rounded-md">{s.water_type}</Badge>
-                              {(s as any).tanker_capacity && orderType === "tanker" && (
-                                <Badge variant="outline" className="text-[10px] rounded-md">{(s as any).tanker_capacity}L</Badge>
+                              {s.tanker_capacity && orderType === "tanker" && (
+                                <Badge variant="outline" className="text-[10px] rounded-md">{s.tanker_capacity}L</Badge>
                               )}
                             </div>
                           </div>
@@ -493,7 +494,7 @@ export default function PlaceOrder() {
                 <Clock className="h-5 w-5 text-primary" />
               </div>
               <div>
-                <p className="text-sm font-medium">Estimated Delivery: {supplier.delivery_time}</p>
+                <p className="text-sm font-medium">Estimated Delivery: {estimateDeliveryTime(supplier.pincode, pincode).label}</p>
                 <p className="text-xs text-muted-foreground">You'll get live tracking updates</p>
               </div>
             </div>
