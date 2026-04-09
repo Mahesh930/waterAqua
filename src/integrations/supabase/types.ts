@@ -14,6 +14,54 @@ export type Database = {
   }
   public: {
     Tables: {
+      admin_commissions: {
+        Row: {
+          area: string
+          commission_amount: number
+          commission_rate: number
+          created_at: string
+          customer_id: string
+          formula_breakdown: string | null
+          id: string
+          is_peak_hour: boolean
+          order_amount: number
+          order_hour: number
+          order_id: string
+          pincode: string | null
+          supplier_id: string
+        }
+        Insert: {
+          area?: string
+          commission_amount: number
+          commission_rate?: number
+          created_at?: string
+          customer_id: string
+          formula_breakdown?: string | null
+          id?: string
+          is_peak_hour?: boolean
+          order_amount: number
+          order_hour?: number
+          order_id: string
+          pincode?: string | null
+          supplier_id: string
+        }
+        Update: {
+          area?: string
+          commission_amount?: number
+          commission_rate?: number
+          created_at?: string
+          customer_id?: string
+          formula_breakdown?: string | null
+          id?: string
+          is_peak_hour?: boolean
+          order_amount?: number
+          order_hour?: number
+          order_id?: string
+          pincode?: string | null
+          supplier_id?: string
+        }
+        Relationships: []
+      }
       feedback: {
         Row: {
           comment: string | null
