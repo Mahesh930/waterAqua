@@ -94,7 +94,7 @@ export default function PlaceOrder() {
 
   const supplier = suppliers.find(s => s.id === supplierId);
   const unitPrice = supplier
-    ? orderType === "tanker" ? Number((supplier as any).price_per_tanker || 500) : Number(supplier.price_per_can)
+    ? orderType === "tanker" ? Number(supplier.price_per_tanker) : Number(supplier.price_per_can)
     : 0;
   const total = unitPrice * quantity;
 
