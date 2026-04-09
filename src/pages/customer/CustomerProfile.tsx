@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { User, Clock, IndianRupee, Settings, Gift, ShoppingBag, ChevronRight, Edit2, Save, Share2, Copy, CheckCircle2 } from "lucide-react";
+import { useState, useEffect } from "react";
+import { User, Clock, IndianRupee, Settings, Gift, ShoppingBag, Edit2, Save, Share2, Copy, CheckCircle2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useAuth } from "@/contexts/AuthContext";
@@ -23,7 +23,45 @@ export default function CustomerProfile() {
   const [phone, setPhone] = useState(profile?.phone || "");
   const [copied, setCopied] = useState(false);
 
-  const referralCode = user?.id?.slice(0, 8).toUpperCase() || "AQUA0000";
+  useEffect(() => {
+    if (profile) {
+      setFullName(profile.full_name || "");
+      setPhone(profile.phone || "");
+    }
+  }, [profile]);
+
+  // Fetch profile with referral data
+  const { data: profileData } = useQuery({
+    queryKey: ["my-profile-referral", user?.id],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("profiles")
+        .select("referral_code, referral_credits")
+        .eq("user_id", user!.id)
+        .single();
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!user,
+  });
+
+  // Fetch referrals made by this user
+  const { data: referrals = [] } = useQuery({
+    queryKey: ["my-referrals", user?.id],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("referrals")
+        .select("*")
+        .eq("referrer_id", user!.id)
+        .order("created_at", { ascending: false });
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!user,
+  });
+
+  const referralCode = (profileData as any)?.referral_code || user?.id?.slice(0, 8).toUpperCase() || "AQUA0000";
+  const referralCredits = Number((profileData as any)?.referral_credits || 0);
 
   const { data: orders = [] } = useQuery({
     queryKey: ["profile-orders", user?.id],
@@ -48,13 +86,8 @@ export default function CustomerProfile() {
       .from("profiles")
       .update({ full_name: fullName, phone } as any)
       .eq("user_id", user.id);
-    if (error) {
-      toast({ title: "Update failed", description: error.message, variant: "destructive" });
-    } else {
-      toast({ title: "Profile updated ✅" });
-      setEditing(false);
-      queryClient.invalidateQueries({ queryKey: ["profile"] });
-    }
+    if (error) toast({ title: "Update failed", description: error.message, variant: "destructive" });
+    else { toast({ title: "Profile updated ✅" }); setEditing(false); }
   };
 
   const copyReferral = () => {
@@ -89,9 +122,7 @@ export default function CustomerProfile() {
           </div>
         </div>
         <div className="px-5 pb-5 -mt-10 relative">
-          <div className="h-20 w-20 rounded-2xl bg-card border-4 border-background shadow-lg flex items-center justify-center text-3xl">
-            👤
-          </div>
+          <div className="h-20 w-20 rounded-2xl bg-card border-4 border-background shadow-lg flex items-center justify-center text-3xl">👤</div>
           <div className="mt-3 flex items-start justify-between">
             <div>
               <h2 className="font-heading text-xl font-bold">{profile?.full_name || "Customer"}</h2>
@@ -102,12 +133,12 @@ export default function CustomerProfile() {
               <Edit2 className="h-3 w-3" /> Edit
             </Button>
           </div>
-          {/* Quick stats */}
-          <div className="grid grid-cols-3 gap-3 mt-4">
+          <div className="grid grid-cols-4 gap-3 mt-4">
             {[
               { label: "Orders", value: orders.length, color: "text-primary" },
               { label: "Delivered", value: deliveredOrders.length, color: "text-success" },
               { label: "Spent", value: `₹${totalSpent}`, color: "text-accent" },
+              { label: "Credits", value: `₹${referralCredits}`, color: "text-warning" },
             ].map(s => (
               <div key={s.label} className="glass rounded-xl p-3 text-center">
                 <p className={`font-heading font-bold text-lg ${s.color}`}>{s.value}</p>
@@ -132,7 +163,6 @@ export default function CustomerProfile() {
 
       {/* Tab Content */}
       <motion.div variants={item}>
-        {/* Orders Tab */}
         {tab === "orders" && (
           <div className="space-y-3">
             {orders.length === 0 ? (
@@ -140,42 +170,31 @@ export default function CustomerProfile() {
                 <ShoppingBag className="h-10 w-10 mx-auto text-muted-foreground/30 mb-2" />
                 <p className="text-sm text-muted-foreground">No orders yet</p>
               </div>
-            ) : (
-              orders.map(order => (
-                <div key={order.id} className="glass-card rounded-2xl p-4 flex items-center gap-3">
-                  <div className="h-10 w-10 rounded-xl bg-primary/10 flex items-center justify-center text-lg shrink-0">🚛</div>
-                  <div className="flex-1 min-w-0">
-                    <p className="font-medium text-sm truncate">{(order as any).suppliers?.business_name || "Supplier"}</p>
-                    <p className="text-xs text-muted-foreground">{order.quantity} units · ₹{Number(order.total_amount)}</p>
-                    <p className="text-[10px] text-muted-foreground">{new Date(order.created_at).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })}</p>
-                  </div>
-                  <span className={`px-2.5 py-1 rounded-lg text-[10px] font-semibold ${statusColors[order.status]}`}>
-                    {order.status.replace(/_/g, " ")}
-                  </span>
+            ) : orders.map(order => (
+              <div key={order.id} className="glass-card rounded-2xl p-4 flex items-center gap-3">
+                <div className="h-10 w-10 rounded-xl bg-primary/10 flex items-center justify-center text-lg shrink-0">🚛</div>
+                <div className="flex-1 min-w-0">
+                  <p className="font-medium text-sm truncate">{(order as any).suppliers?.business_name || "Supplier"}</p>
+                  <p className="text-xs text-muted-foreground">{order.quantity} units · ₹{Number(order.total_amount)}</p>
+                  <p className="text-[10px] text-muted-foreground">{new Date(order.created_at).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })}</p>
                 </div>
-              ))
-            )}
+                <span className={`px-2.5 py-1 rounded-lg text-[10px] font-semibold ${statusColors[order.status]}`}>
+                  {order.status.replace(/_/g, " ")}
+                </span>
+              </div>
+            ))}
           </div>
         )}
 
-        {/* Payments Tab */}
         {tab === "payments" && (
           <div className="space-y-3">
             <div className="glass-card rounded-2xl p-5">
               <h3 className="font-heading font-semibold mb-3">Payment Summary</h3>
               <div className="space-y-2">
-                <div className="flex justify-between text-sm">
-                  <span className="text-muted-foreground">Total Spent</span>
-                  <span className="font-bold text-primary">₹{totalSpent}</span>
-                </div>
-                <div className="flex justify-between text-sm">
-                  <span className="text-muted-foreground">Orders Paid</span>
-                  <span className="font-medium">{deliveredOrders.length}</span>
-                </div>
-                <div className="flex justify-between text-sm">
-                  <span className="text-muted-foreground">Avg. Order Value</span>
-                  <span className="font-medium">₹{deliveredOrders.length > 0 ? Math.round(totalSpent / deliveredOrders.length) : 0}</span>
-                </div>
+                <div className="flex justify-between text-sm"><span className="text-muted-foreground">Total Spent</span><span className="font-bold text-primary">₹{totalSpent}</span></div>
+                <div className="flex justify-between text-sm"><span className="text-muted-foreground">Orders Paid</span><span className="font-medium">{deliveredOrders.length}</span></div>
+                <div className="flex justify-between text-sm"><span className="text-muted-foreground">Avg. Order</span><span className="font-medium">₹{deliveredOrders.length > 0 ? Math.round(totalSpent / deliveredOrders.length) : 0}</span></div>
+                <div className="flex justify-between text-sm"><span className="text-muted-foreground">Referral Credits</span><span className="font-bold text-warning">₹{referralCredits}</span></div>
               </div>
             </div>
             {deliveredOrders.length > 0 && (
@@ -195,23 +214,13 @@ export default function CustomerProfile() {
           </div>
         )}
 
-        {/* Settings Tab */}
         {tab === "settings" && (
           <div className="glass-card rounded-2xl p-5 space-y-4">
             <h3 className="font-heading font-semibold">Account Settings</h3>
             <div className="space-y-3">
-              <div>
-                <label className="text-xs font-medium text-muted-foreground">Full Name</label>
-                <Input value={fullName} onChange={e => setFullName(e.target.value)} disabled={!editing} className="rounded-xl mt-1" />
-              </div>
-              <div>
-                <label className="text-xs font-medium text-muted-foreground">Phone</label>
-                <Input value={phone} onChange={e => setPhone(e.target.value)} disabled={!editing} className="rounded-xl mt-1" placeholder="+91 XXXXX XXXXX" />
-              </div>
-              <div>
-                <label className="text-xs font-medium text-muted-foreground">Email</label>
-                <Input value={user?.email || ""} disabled className="rounded-xl mt-1 opacity-60" />
-              </div>
+              <div><label className="text-xs font-medium text-muted-foreground">Full Name</label><Input value={fullName} onChange={e => setFullName(e.target.value)} disabled={!editing} className="rounded-xl mt-1" /></div>
+              <div><label className="text-xs font-medium text-muted-foreground">Phone</label><Input value={phone} onChange={e => setPhone(e.target.value)} disabled={!editing} className="rounded-xl mt-1" placeholder="+91 XXXXX XXXXX" /></div>
+              <div><label className="text-xs font-medium text-muted-foreground">Email</label><Input value={user?.email || ""} disabled className="rounded-xl mt-1 opacity-60" /></div>
             </div>
             {editing && (
               <Button className="w-full rounded-xl gap-2" onClick={handleSaveProfile}>
@@ -221,7 +230,6 @@ export default function CustomerProfile() {
           </div>
         )}
 
-        {/* Referrals Tab */}
         {tab === "referrals" && (
           <div className="space-y-4">
             <div className="glass-card rounded-2xl p-5 text-center">
@@ -229,7 +237,7 @@ export default function CustomerProfile() {
                 <Gift className="h-8 w-8 text-primary" />
               </div>
               <h3 className="font-heading text-lg font-bold">Refer & Earn</h3>
-              <p className="text-sm text-muted-foreground mt-1">Share your code with friends and earn rewards on their first order!</p>
+              <p className="text-sm text-muted-foreground mt-1">Share your code with friends and earn ₹50 on their first delivered order!</p>
               
               <div className="mt-5 glass rounded-2xl p-4">
                 <p className="text-xs text-muted-foreground mb-1.5">Your Referral Code</p>
@@ -241,22 +249,58 @@ export default function CustomerProfile() {
                   </Button>
                 </div>
               </div>
+
+              {/* Stats */}
+              <div className="grid grid-cols-3 gap-3 mt-4">
+                <div className="glass rounded-xl p-3 text-center">
+                  <p className="font-heading font-bold text-lg text-primary">{referrals.length}</p>
+                  <p className="text-[10px] text-muted-foreground">Referrals</p>
+                </div>
+                <div className="glass rounded-xl p-3 text-center">
+                  <p className="font-heading font-bold text-lg text-success">{referrals.filter((r: any) => r.status === "credited").length}</p>
+                  <p className="text-[10px] text-muted-foreground">Credited</p>
+                </div>
+                <div className="glass rounded-xl p-3 text-center">
+                  <p className="font-heading font-bold text-lg text-warning">₹{referralCredits}</p>
+                  <p className="text-[10px] text-muted-foreground">Earned</p>
+                </div>
+              </div>
             </div>
+
+            {/* Referral History */}
+            {referrals.length > 0 && (
+              <div className="glass-card rounded-2xl p-5">
+                <h4 className="font-heading font-semibold mb-3">Referral History</h4>
+                <div className="space-y-2">
+                  {referrals.map((r: any) => (
+                    <div key={r.id} className="glass rounded-xl p-3 flex items-center justify-between">
+                      <div>
+                        <p className="text-sm font-medium">Referral #{r.id.slice(0, 8)}</p>
+                        <p className="text-[10px] text-muted-foreground">{new Date(r.created_at).toLocaleDateString("en-IN")}</p>
+                      </div>
+                      <div className="text-right">
+                        <span className={`px-2 py-0.5 rounded-lg text-[10px] font-semibold ${r.status === "credited" ? "bg-success/10 text-success" : "bg-warning/10 text-warning"}`}>
+                          {r.status === "credited" ? "✅ Credited" : "⏳ Pending"}
+                        </span>
+                        <p className="text-xs font-bold text-primary mt-0.5">₹{Number(r.reward_amount)}</p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
 
             <div className="glass-card rounded-2xl p-5">
               <h4 className="font-heading font-semibold mb-3">How it works</h4>
               <div className="space-y-3">
                 {[
                   { step: "1", title: "Share your code", desc: "Send your referral code to friends" },
-                  { step: "2", title: "They sign up", desc: "Friends register using your code" },
-                  { step: "3", title: "Both earn rewards", desc: "Get ₹50 credit on their first order" },
+                  { step: "2", title: "They sign up & order", desc: "Friends register and place their first order" },
+                  { step: "3", title: "Both earn ₹50", desc: "Credits added when their order is delivered" },
                 ].map(s => (
                   <div key={s.step} className="flex items-start gap-3">
                     <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center text-xs font-bold text-primary shrink-0">{s.step}</div>
-                    <div>
-                      <p className="text-sm font-medium">{s.title}</p>
-                      <p className="text-xs text-muted-foreground">{s.desc}</p>
-                    </div>
+                    <div><p className="text-sm font-medium">{s.title}</p><p className="text-xs text-muted-foreground">{s.desc}</p></div>
                   </div>
                 ))}
               </div>
