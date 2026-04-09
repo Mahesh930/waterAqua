@@ -52,6 +52,22 @@ export default function Register() {
     await supabase.from("profiles").update({ phone, full_name: name }).eq("user_id", userId);
     await supabase.from("user_roles").insert({ user_id: userId, role });
 
+    // Handle referral code
+    if (referralInput.trim()) {
+      const { data: referrerProfile } = await supabase
+        .from("profiles")
+        .select("user_id")
+        .eq("referral_code", referralInput.trim().toUpperCase())
+        .single();
+      if (referrerProfile) {
+        await supabase.from("referrals").insert({
+          referrer_id: referrerProfile.user_id,
+          referred_id: userId,
+          referral_code: referralInput.trim().toUpperCase(),
+        } as any);
+      }
+    }
+
     if (role === "supplier") {
       const serviceArea = city ? `${area}, ${city}` : area;
       await supabase.from("suppliers").insert({
