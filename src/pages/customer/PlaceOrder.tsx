@@ -363,7 +363,6 @@ export default function PlaceOrder() {
                   const price = orderType === "tanker" ? Number(s.price_per_tanker) : Number(s.price_per_can);
                   const eta = estimateDeliveryTime(s.pincode, pincode);
                   const isSelected = supplierId === s.id;
-                  const isSelected = supplierId === s.id;
                   return (
                     <motion.button key={s.id}
                       initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}
