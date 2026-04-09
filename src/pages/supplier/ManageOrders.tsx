@@ -1,8 +1,9 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
-import { Check, X, Truck, MapPin } from "lucide-react";
+import { Check, X, Truck, MapPin, CheckCheck } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -26,6 +27,7 @@ const statusLabels: Record<string, string> = {
 
 export default function ManageOrders() {
   const [filter, setFilter] = useState("all");
+  const [selected, setSelected] = useState<Set<string>>(new Set());
   const { toast } = useToast();
   const { user } = useAuth();
   const queryClient = useQueryClient();
@@ -59,6 +61,24 @@ export default function ManageOrders() {
   });
 
   const filtered = filter === "all" ? orders : orders.filter(o => o.status === filter);
+  const pendingOrders = filtered.filter(o => o.status === "placed");
+  const selectedPending = pendingOrders.filter(o => selected.has(o.id));
+
+  const toggleSelect = (id: string) => {
+    setSelected(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      return next;
+    });
+  };
+
+  const toggleSelectAll = () => {
+    if (selectedPending.length === pendingOrders.length && pendingOrders.length > 0) {
+      setSelected(new Set());
+    } else {
+      setSelected(new Set(pendingOrders.map(o => o.id)));
+    }
+  };
 
   const updateStatus = async (orderId: string, status: string) => {
     const { error } = await supabase
@@ -70,6 +90,23 @@ export default function ManageOrders() {
       toast({ title: "Update failed", description: error.message, variant: "destructive" });
     } else {
       toast({ title: "Status Updated", description: `Order → ${statusLabels[status]}` });
+      queryClient.invalidateQueries({ queryKey: ["supplier-orders"] });
+    }
+  };
+
+  const bulkAccept = async () => {
+    if (selectedPending.length === 0) return;
+    const ids = selectedPending.map(o => o.id);
+    const { error } = await supabase
+      .from("orders")
+      .update({ status: "confirmed" as any })
+      .in("id", ids);
+
+    if (error) {
+      toast({ title: "Bulk accept failed", description: error.message, variant: "destructive" });
+    } else {
+      toast({ title: `${ids.length} orders accepted!` });
+      setSelected(new Set());
       queryClient.invalidateQueries({ queryKey: ["supplier-orders"] });
     }
   };
@@ -93,6 +130,25 @@ export default function ManageOrders() {
         </Select>
       </div>
 
+      {/* Bulk actions bar */}
+      {pendingOrders.length > 0 && (
+        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}
+          className="glass-card rounded-2xl p-3 flex items-center gap-3 flex-wrap">
+          <Button variant="outline" size="sm" className="rounded-xl gap-1.5" onClick={toggleSelectAll}>
+            <CheckCheck className="h-3.5 w-3.5" />
+            {selectedPending.length === pendingOrders.length ? "Deselect All" : `Select All Pending (${pendingOrders.length})`}
+          </Button>
+          {selectedPending.length > 0 && (
+            <Button size="sm" className="rounded-xl gap-1.5" onClick={bulkAccept}>
+              <Check className="h-3.5 w-3.5" /> Accept {selectedPending.length} Order{selectedPending.length > 1 ? "s" : ""}
+            </Button>
+          )}
+          {selectedPending.length > 0 && (
+            <span className="text-xs text-muted-foreground">{selectedPending.length} selected</span>
+          )}
+        </motion.div>
+      )}
+
       {isLoading ? (
         <div className="flex justify-center py-16">
           <div className="animate-spin h-8 w-8 border-4 border-primary border-t-transparent rounded-full" />
@@ -104,14 +160,23 @@ export default function ManageOrders() {
           {filtered.map((order, i) => (
             <motion.div key={order.id}
               initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.05 }}
-              className="glass-card rounded-2xl p-4 space-y-3">
+              className={`glass-card rounded-2xl p-4 space-y-3 transition-colors ${selected.has(order.id) ? "ring-2 ring-primary/50" : ""}`}>
               <div className="flex items-start justify-between">
-                <div>
-                  <div className="flex items-center gap-2">
-                    <span className="font-medium">Order {order.id.slice(0, 8)}</span>
-                    <span className={`px-2.5 py-0.5 rounded-lg text-xs font-medium ${statusColors[order.status]}`}>
-                      {statusLabels[order.status]}
-                    </span>
+                <div className="flex items-center gap-3">
+                  {order.status === "placed" && (
+                    <Checkbox
+                      checked={selected.has(order.id)}
+                      onCheckedChange={() => toggleSelect(order.id)}
+                      className="mt-0.5"
+                    />
+                  )}
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <span className="font-medium">Order {order.id.slice(0, 8)}</span>
+                      <span className={`px-2.5 py-0.5 rounded-lg text-xs font-medium ${statusColors[order.status]}`}>
+                        {statusLabels[order.status]}
+                      </span>
+                    </div>
                   </div>
                 </div>
                 <span className="font-heading font-bold text-primary">₹{Number(order.total_amount)}</span>
