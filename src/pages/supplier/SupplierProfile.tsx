@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
-import { Star } from "lucide-react";
+import { Star, Truck, Phone, Hash, Droplets } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
@@ -49,6 +49,9 @@ export default function SupplierProfile() {
     water_type: "RO Purified",
     stock: 0,
     delivery_time: "30-45 min",
+    tanker_capacity: 5000,
+    driver_phone: "",
+    vehicle_number: "",
   });
 
   useEffect(() => {
@@ -60,6 +63,9 @@ export default function SupplierProfile() {
         water_type: supplier.water_type,
         stock: supplier.stock,
         delivery_time: supplier.delivery_time,
+        tanker_capacity: (supplier as any).tanker_capacity ?? 5000,
+        driver_phone: (supplier as any).driver_phone ?? "",
+        vehicle_number: (supplier as any).vehicle_number ?? "",
       });
     }
   }, [supplier]);
@@ -68,7 +74,7 @@ export default function SupplierProfile() {
     if (!supplier) return;
     const { error } = await supabase
       .from("suppliers")
-      .update(form)
+      .update(form as any)
       .eq("id", supplier.id);
 
     if (error) {
@@ -98,8 +104,27 @@ export default function SupplierProfile() {
           <div><Label>Available Stock (cans)</Label><Input type="number" className="mt-1 rounded-xl" value={form.stock} onChange={e => setForm({...form, stock: Number(e.target.value)})} /></div>
           <div><Label>Delivery Time</Label><Input className="mt-1 rounded-xl" value={form.delivery_time} onChange={e => setForm({...form, delivery_time: e.target.value})} /></div>
         </div>
-        <Button onClick={handleSave} className="rounded-xl">Save Changes</Button>
       </div>
+
+      <div className="glass-card rounded-2xl p-6 space-y-5">
+        <h3 className="font-heading font-semibold flex items-center gap-2"><Truck className="h-5 w-5 text-primary" /> Tanker & Driver Details</h3>
+        <div className="grid sm:grid-cols-2 gap-4">
+          <div>
+            <Label className="flex items-center gap-1.5"><Droplets className="h-3.5 w-3.5" /> Tanker Capacity (Liters)</Label>
+            <Input type="number" className="mt-1 rounded-xl" value={form.tanker_capacity} onChange={e => setForm({...form, tanker_capacity: Number(e.target.value)})} />
+          </div>
+          <div>
+            <Label className="flex items-center gap-1.5"><Phone className="h-3.5 w-3.5" /> Driver Phone Number</Label>
+            <Input className="mt-1 rounded-xl" placeholder="+91 98765 43210" value={form.driver_phone} onChange={e => setForm({...form, driver_phone: e.target.value})} />
+          </div>
+          <div className="sm:col-span-2">
+            <Label className="flex items-center gap-1.5"><Hash className="h-3.5 w-3.5" /> Vehicle Number</Label>
+            <Input className="mt-1 rounded-xl" placeholder="MH 12 AB 1234" value={form.vehicle_number} onChange={e => setForm({...form, vehicle_number: e.target.value})} />
+          </div>
+        </div>
+      </div>
+
+      <Button onClick={handleSave} className="rounded-xl w-full sm:w-auto">Save All Changes</Button>
 
       <div className="glass-card rounded-2xl p-6 space-y-4">
         <h3 className="font-heading font-semibold">Customer Feedback</h3>
