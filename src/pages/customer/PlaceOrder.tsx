@@ -494,7 +494,7 @@ export default function PlaceOrder() {
                 <Clock className="h-5 w-5 text-primary" />
               </div>
               <div>
-                <p className="text-sm font-medium">Estimated Delivery: {supplier.delivery_time}</p>
+                <p className="text-sm font-medium">Estimated Delivery: {estimateDeliveryTime(supplier.pincode, pincode).label}</p>
                 <p className="text-xs text-muted-foreground">You'll get live tracking updates</p>
               </div>
             </div>
