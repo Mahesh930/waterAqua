@@ -5,6 +5,7 @@ import {
   ChevronRight, ChevronLeft, CheckCircle2, Phone, Package, Loader2,
   Minus, Plus, Info
 } from "lucide-react";
+import { estimateDeliveryTime } from "@/lib/delivery-estimate";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
