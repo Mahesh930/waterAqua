@@ -3,8 +3,10 @@ import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery } from "@tanstack/react-query";
 import { motion } from "framer-motion";
-import { IndianRupee, TrendingUp, Package, Calendar } from "lucide-react";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { IndianRupee, TrendingUp, Package, Calendar, ChevronRight } from "lucide-react";
+
+const container = { hidden: {}, show: { transition: { staggerChildren: 0.06 } } };
+const item = { hidden: { opacity: 0, y: 20 }, show: { opacity: 1, y: 0 } };
 
 export default function PaymentHistory() {
   const { user } = useAuth();
@@ -23,19 +25,13 @@ export default function PaymentHistory() {
   const { data: orders = [], isLoading } = useQuery({
     queryKey: ["supplier-delivered-orders", supplier?.id],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("orders")
-        .select("*")
-        .eq("supplier_id", supplier!.id)
-        .eq("status", "delivered")
-        .order("created_at", { ascending: false });
+      const { data, error } = await supabase.from("orders").select("*").eq("supplier_id", supplier!.id).eq("status", "delivered").order("created_at", { ascending: false });
       if (error) throw error;
       return data;
     },
     enabled: !!supplier,
   });
 
-  // Get unique months
   const months = [...new Set(orders.map(o => {
     const d = new Date(o.created_at);
     return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
@@ -48,73 +44,81 @@ export default function PaymentHistory() {
 
   const totalRevenue = filtered.reduce((s, o) => s + Number(o.total_amount), 0);
   const totalCans = filtered.reduce((s, o) => s + o.quantity, 0);
+  const avgOrder = filtered.length > 0 ? Math.round(totalRevenue / filtered.length) : 0;
+
+  const monthTabs = [{ key: "all", label: "All Time" }, ...months.map(m => ({
+    key: m, label: new Date(m + "-01").toLocaleDateString("en-IN", { month: "short", year: "numeric" }),
+  }))];
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-start justify-between flex-wrap gap-4">
-        <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
-          <h2 className="font-heading text-3xl font-bold mb-1">Payment History</h2>
-          <p className="text-muted-foreground">Track your earnings from delivered orders.</p>
-        </motion.div>
-        <Select value={monthFilter} onValueChange={setMonthFilter}>
-          <SelectTrigger className="w-44 rounded-xl"><SelectValue /></SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">All Time</SelectItem>
-            {months.map(m => (
-              <SelectItem key={m} value={m}>
-                {new Date(m + "-01").toLocaleDateString("en-IN", { month: "long", year: "numeric" })}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      </div>
+    <motion.div variants={container} initial="hidden" animate="show" className="space-y-6">
+      {/* Header */}
+      <motion.div variants={item}>
+        <h2 className="font-heading text-2xl sm:text-3xl font-bold">Payment History</h2>
+        <p className="text-muted-foreground text-sm mt-0.5">Track your earnings from delivered orders</p>
+      </motion.div>
 
-      <div className="grid sm:grid-cols-3 gap-4">
-        <div className="glass-card rounded-2xl p-5 bg-gradient-to-br from-success/20 to-success/5">
-          <div className="flex items-center gap-4">
-            <div className="h-12 w-12 rounded-2xl bg-card/50 flex items-center justify-center"><IndianRupee className="h-6 w-6 text-success" /></div>
-            <div><p className="text-sm text-muted-foreground">Total Revenue</p><p className="text-2xl font-heading font-bold">₹{totalRevenue}</p></div>
-          </div>
-        </div>
-        <div className="glass-card rounded-2xl p-5 bg-gradient-to-br from-primary/20 to-primary/5">
-          <div className="flex items-center gap-4">
-            <div className="h-12 w-12 rounded-2xl bg-card/50 flex items-center justify-center"><Package className="h-6 w-6 text-primary" /></div>
-            <div><p className="text-sm text-muted-foreground">Orders Completed</p><p className="text-2xl font-heading font-bold">{filtered.length}</p></div>
-          </div>
-        </div>
-        <div className="glass-card rounded-2xl p-5 bg-gradient-to-br from-accent/20 to-accent/5">
-          <div className="flex items-center gap-4">
-            <div className="h-12 w-12 rounded-2xl bg-card/50 flex items-center justify-center"><TrendingUp className="h-6 w-6 text-accent" /></div>
-            <div><p className="text-sm text-muted-foreground">Cans Delivered</p><p className="text-2xl font-heading font-bold">{totalCans}</p></div>
-          </div>
-        </div>
-      </div>
+      {/* Month Filter Tabs */}
+      <motion.div variants={item} className="flex gap-1.5 overflow-x-auto pb-1">
+        {monthTabs.map(t => (
+          <button key={t.key} onClick={() => setMonthFilter(t.key)}
+            className={`px-3.5 py-2 rounded-xl text-xs font-semibold whitespace-nowrap transition-all ${
+              monthFilter === t.key ? "bg-primary text-primary-foreground shadow-md shadow-primary/20" : "glass text-muted-foreground hover:text-foreground"
+            }`}>{t.label}</button>
+        ))}
+      </motion.div>
 
+      {/* Stats */}
+      <motion.div variants={item} className="grid grid-cols-3 gap-3">
+        {[
+          { icon: IndianRupee, label: "Revenue", value: `₹${totalRevenue}`, gradient: "from-emerald-500/20 via-emerald-400/10 to-transparent", iconBg: "bg-emerald-500/15", iconColor: "text-emerald-500" },
+          { icon: Package, label: "Orders", value: filtered.length, gradient: "from-primary/20 via-primary/10 to-transparent", iconBg: "bg-primary/15", iconColor: "text-primary" },
+          { icon: TrendingUp, label: "Avg Order", value: `₹${avgOrder}`, gradient: "from-accent/20 via-accent/10 to-transparent", iconBg: "bg-accent/15", iconColor: "text-accent" },
+        ].map(s => (
+          <div key={s.label} className={`glass-card rounded-2xl p-4 bg-gradient-to-br ${s.gradient}`}>
+            <div className={`h-9 w-9 rounded-xl ${s.iconBg} flex items-center justify-center mb-2`}>
+              <s.icon className={`h-4.5 w-4.5 ${s.iconColor}`} />
+            </div>
+            <p className="text-2xl font-heading font-bold">{s.value}</p>
+            <p className="text-[11px] text-muted-foreground font-medium">{s.label}</p>
+          </div>
+        ))}
+      </motion.div>
+
+      {/* Transactions */}
       {isLoading ? (
-        <div className="flex justify-center py-16"><div className="animate-spin h-8 w-8 border-4 border-primary border-t-transparent rounded-full" /></div>
+        <div className="flex flex-col items-center justify-center py-20 gap-3">
+          <div className="animate-spin h-10 w-10 border-4 border-primary border-t-transparent rounded-full" />
+          <p className="text-sm text-muted-foreground">Loading payments...</p>
+        </div>
       ) : filtered.length === 0 ? (
-        <p className="text-center text-muted-foreground py-12">No delivered orders found.</p>
+        <div className="text-center py-20">
+          <div className="h-20 w-20 mx-auto mb-4 rounded-full bg-muted/50 flex items-center justify-center">
+            <IndianRupee className="h-10 w-10 text-muted-foreground/30" />
+          </div>
+          <p className="font-heading font-semibold text-lg">No payments yet</p>
+          <p className="text-sm text-muted-foreground mt-1">Completed orders will appear here</p>
+        </div>
       ) : (
-        <div className="space-y-3">
+        <div className="space-y-2">
+          <p className="text-xs text-muted-foreground font-medium">{filtered.length} transaction{filtered.length !== 1 ? "s" : ""}</p>
           {filtered.map((order, i) => (
-            <motion.div key={order.id} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.03 }}
-              className="glass-card rounded-2xl p-4 flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <div className="h-10 w-10 rounded-xl bg-success/10 flex items-center justify-center">
-                  <Calendar className="h-5 w-5 text-success" />
-                </div>
-                <div>
-                  <p className="font-medium">Order {order.id.slice(0, 8)}</p>
-                  <p className="text-sm text-muted-foreground">
-                    {order.quantity} cans · {new Date(order.created_at).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })}
-                  </p>
-                </div>
+            <motion.div key={order.id} variants={item}
+              className="glass-card rounded-2xl p-4 flex items-center gap-3 hover:shadow-lg transition-shadow">
+              <div className="h-11 w-11 rounded-xl bg-success/10 flex items-center justify-center shrink-0">
+                <Calendar className="h-5 w-5 text-success" />
               </div>
-              <span className="font-heading font-bold text-success">₹{Number(order.total_amount)}</span>
+              <div className="flex-1 min-w-0">
+                <p className="font-heading font-semibold text-sm">Order #{order.id.slice(0, 8)}</p>
+                <p className="text-xs text-muted-foreground">
+                  {order.quantity} units · {new Date(order.created_at).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })}
+                </p>
+              </div>
+              <span className="font-heading font-bold text-success text-lg">+₹{Number(order.total_amount)}</span>
             </motion.div>
           ))}
         </div>
       )}
-    </div>
+    </motion.div>
   );
 }

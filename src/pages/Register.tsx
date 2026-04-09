@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
-import { Droplets, Mail, Lock, Eye, EyeOff, User, Phone, MapPin } from "lucide-react";
+import { Droplets, Mail, Lock, Eye, EyeOff, User, Phone, MapPin, Gift } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -12,6 +12,7 @@ export default function Register() {
   const initialRole = searchParams.get("role") === "supplier" ? "supplier" : "customer";
   const [role, setRole] = useState<"customer" | "supplier">(initialRole);
   const [name, setName] = useState("");
+  const [referralInput, setReferralInput] = useState("");
   const [phone, setPhone] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -50,6 +51,22 @@ export default function Register() {
 
     await supabase.from("profiles").update({ phone, full_name: name }).eq("user_id", userId);
     await supabase.from("user_roles").insert({ user_id: userId, role });
+
+    // Handle referral code
+    if (referralInput.trim()) {
+      const { data: referrerProfile } = await supabase
+        .from("profiles")
+        .select("user_id")
+        .eq("referral_code", referralInput.trim().toUpperCase())
+        .single();
+      if (referrerProfile) {
+        await supabase.from("referrals").insert({
+          referrer_id: referrerProfile.user_id,
+          referred_id: userId,
+          referral_code: referralInput.trim().toUpperCase(),
+        } as any);
+      }
+    }
 
     if (role === "supplier") {
       const serviceArea = city ? `${area}, ${city}` : area;
@@ -150,6 +167,16 @@ export default function Register() {
                   <Input id="location" placeholder="e.g. Koramangala, Bangalore" className="pl-10 rounded-xl" value={area} onChange={e => setArea(e.target.value)} />
                 </div>
                 <p className="text-xs text-muted-foreground mt-1">Helps us find nearby tanker suppliers</p>
+              </div>
+            )}
+            {role === "customer" && (
+              <div>
+                <Label htmlFor="referral">Referral Code (optional)</Label>
+                <div className="relative mt-1">
+                  <Gift className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <Input id="referral" placeholder="e.g. AQUA1234" className="pl-10 rounded-xl uppercase" value={referralInput} onChange={e => setReferralInput(e.target.value.toUpperCase())} />
+                </div>
+                <p className="text-xs text-muted-foreground mt-1">Both you and your friend earn ₹50!</p>
               </div>
             )}
             <Button type="submit" className="w-full rounded-xl" disabled={loading}>
