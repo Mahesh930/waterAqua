@@ -1,11 +1,12 @@
 import { useEffect } from "react";
 import { Link } from "react-router-dom";
-import { ShoppingBag, Truck, Clock, ArrowRight, Droplets, MapPin, Star, Navigation, Zap, Shield, ChevronRight } from "lucide-react";
+import { ShoppingBag, Truck, Clock, ArrowRight, Droplets, MapPin, Star, Navigation, Zap, Shield, ChevronRight, Package, ShoppingCart } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { motion } from "framer-motion";
+import { useCart } from "@/hooks/use-cart";
 
 const statusColors: Record<string, string> = {
   placed: "bg-warning/10 text-warning border-warning/20",
@@ -26,9 +27,17 @@ const statusLabels: Record<string, string> = {
 const container = { hidden: {}, show: { transition: { staggerChildren: 0.08 } } };
 const item = { hidden: { opacity: 0, y: 20 }, show: { opacity: 1, y: 0, transition: { duration: 0.4 } } };
 
+const productCategories = [
+  { icon: "🍶", label: "Water Bottles", desc: "5L & 10L", color: "from-blue-500/20 to-blue-400/5", path: "/customer/products?cat=bottle" },
+  { icon: "🪣", label: "Water Cans", desc: "20L Standard", color: "from-emerald-500/20 to-emerald-400/5", path: "/customer/products?cat=can" },
+  { icon: "🫙", label: "Water Jars", desc: "15L Premium", color: "from-violet-500/20 to-violet-400/5", path: "/customer/products?cat=jar" },
+  { icon: "🚛", label: "Tanker Delivery", desc: "5000L+ Bulk", color: "from-amber-500/20 to-amber-400/5", path: "/customer/products?cat=tanker" },
+];
+
 export default function CustomerHome() {
   const { user, profile } = useAuth();
   const queryClient = useQueryClient();
+  const { totalItems } = useCart();
 
   const { data: orders = [] } = useQuery({
     queryKey: ["customer-orders", user?.id],
@@ -64,13 +73,6 @@ export default function CustomerHome() {
     { icon: Droplets, label: "Total Spent", value: `₹${totalSpent}`, gradient: "from-amber-500/20 via-amber-400/10 to-transparent", iconBg: "bg-amber-500/15", iconColor: "text-amber-500" },
   ];
 
-  const quickActions = [
-    { icon: Droplets, label: "Book Water", desc: "Order cans or tanker", path: "/customer/order", color: "from-primary to-blue-600", ring: "ring-primary/20" },
-    { icon: Star, label: "Find Suppliers", desc: "Browse & compare", path: "/customer/suppliers", color: "from-accent to-teal-600", ring: "ring-accent/20" },
-    { icon: Navigation, label: "Track Order", desc: "Live delivery status", path: "/customer/track", color: "from-violet-500 to-purple-600", ring: "ring-violet-500/20" },
-    { icon: Clock, label: "Order History", desc: "Past deliveries", path: "/customer/history", color: "from-amber-500 to-orange-600", ring: "ring-amber-500/20" },
-  ];
-
   return (
     <motion.div variants={container} initial="hidden" animate="show" className="space-y-8">
       {/* Hero Banner */}
@@ -87,36 +89,66 @@ export default function CustomerHome() {
               <Droplets className="h-4 w-4" />
             </div>
             <span className="text-xs font-medium bg-white/15 backdrop-blur px-2.5 py-0.5 rounded-full">
-              {activeOrders.length > 0 ? `${activeOrders.length} active order${activeOrders.length > 1 ? "s" : ""}` : "Ready to order"}
+              {activeOrders.length > 0 ? `${activeOrders.length} active order${activeOrders.length > 1 ? "s" : ""}` : "Fresh water, delivered fast"}
             </span>
           </div>
           <h2 className="font-heading text-2xl sm:text-3xl font-bold mt-3">
             Hello{profile?.full_name ? `, ${profile.full_name.split(" ")[0]}` : ""}! 💧
           </h2>
           <p className="text-sm sm:text-base text-white/80 mt-1 max-w-md">
-            Get fresh water delivered to your doorstep. Fast, reliable, and affordable.
+            Get fresh water products delivered to your doorstep. Bottles, cans, jars & tankers.
           </p>
           <div className="flex gap-3 mt-5">
-            <Link to="/customer/order">
+            <Link to="/customer/products">
               <Button size="lg" className="rounded-xl bg-white text-primary hover:bg-white/90 shadow-lg gap-2 font-semibold">
-                <Zap className="h-4 w-4" /> Book Now
+                <Package className="h-4 w-4" /> Browse Products
               </Button>
             </Link>
-            <Link to="/customer/suppliers">
-              <Button size="lg" variant="outline" className="rounded-xl border-white/30 text-white hover:bg-white/10 gap-2">
-                Browse Suppliers
-              </Button>
-            </Link>
+            {totalItems > 0 && (
+              <Link to="/customer/cart">
+                <Button size="lg" variant="outline" className="rounded-xl border-white/30 text-white hover:bg-white/10 gap-2">
+                  <ShoppingCart className="h-4 w-4" /> Cart ({totalItems})
+                </Button>
+              </Link>
+            )}
           </div>
+        </div>
+      </motion.div>
+
+      {/* Product Categories */}
+      <motion.div variants={item}>
+        <div className="flex items-center justify-between mb-3">
+          <h3 className="font-heading font-semibold text-lg">Water Products</h3>
+          <Link to="/customer/products" className="text-xs text-primary font-medium flex items-center gap-1 hover:underline">
+            View All <ChevronRight className="h-3 w-3" />
+          </Link>
+        </div>
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+          {productCategories.map((cat, i) => (
+            <Link key={cat.label} to={cat.path}>
+              <motion.div
+                whileHover={{ scale: 1.02, y: -2 }} whileTap={{ scale: 0.98 }}
+                className={`glass-card rounded-2xl p-4 cursor-pointer group hover:shadow-xl transition-all bg-gradient-to-br ${cat.color}`}>
+                <span className="text-3xl">{cat.icon}</span>
+                <p className="font-heading font-semibold text-sm mt-2">{cat.label}</p>
+                <p className="text-[11px] text-muted-foreground">{cat.desc}</p>
+              </motion.div>
+            </Link>
+          ))}
         </div>
       </motion.div>
 
       {/* Quick Actions */}
       <motion.div variants={item}>
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-          {quickActions.map((action, i) => (
+          {[
+            { icon: Droplets, label: "Quick Order", desc: "Book directly", path: "/customer/order", color: "from-primary to-blue-600", ring: "ring-primary/20" },
+            { icon: Star, label: "Find Suppliers", desc: "Browse & compare", path: "/customer/suppliers", color: "from-accent to-teal-600", ring: "ring-accent/20" },
+            { icon: Navigation, label: "Track Order", desc: "Live status", path: "/customer/track", color: "from-violet-500 to-purple-600", ring: "ring-violet-500/20" },
+            { icon: Clock, label: "Order History", desc: "Past deliveries", path: "/customer/history", color: "from-amber-500 to-orange-600", ring: "ring-amber-500/20" },
+          ].map((action) => (
             <Link key={action.path} to={action.path}>
-              <motion.div 
+              <motion.div
                 whileHover={{ scale: 1.02, y: -2 }} whileTap={{ scale: 0.98 }}
                 className={`glass-card rounded-2xl p-4 cursor-pointer group hover:shadow-xl transition-all duration-300 ring-1 ${action.ring} ring-inset`}>
                 <div className={`h-10 w-10 rounded-xl bg-gradient-to-br ${action.color} flex items-center justify-center mb-3 group-hover:scale-110 transition-transform`}>
@@ -183,14 +215,13 @@ export default function CustomerHome() {
                     </Link>
                   </div>
                 </div>
-                {/* Progress bar */}
                 <div className="h-1 bg-muted">
-                  <motion.div 
+                  <motion.div
                     className="h-full bg-gradient-to-r from-primary to-accent rounded-full"
                     initial={{ width: "0%" }}
-                    animate={{ 
-                      width: order.status === "placed" ? "25%" : 
-                             order.status === "confirmed" ? "50%" : 
+                    animate={{
+                      width: order.status === "placed" ? "25%" :
+                             order.status === "confirmed" ? "50%" :
                              order.status === "out_for_delivery" ? "75%" : "100%"
                     }}
                     transition={{ duration: 0.8, ease: "easeOut" }}
@@ -203,8 +234,7 @@ export default function CustomerHome() {
       )}
 
       {/* Trust Badges */}
-      <motion.div variants={item}
-        className="glass-card rounded-2xl p-5">
+      <motion.div variants={item} className="glass-card rounded-2xl p-5">
         <div className="grid grid-cols-3 gap-4 text-center">
           {[
             { icon: Shield, label: "Verified Suppliers", desc: "All suppliers verified" },
