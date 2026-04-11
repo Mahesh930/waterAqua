@@ -161,7 +161,10 @@ export default function BrowseSuppliers() {
             <Navigation className="h-8 w-8 text-primary" />
           </div>
           <h3 className="font-heading font-semibold text-lg">Enter your delivery pincode</h3>
-          <p className="text-sm text-muted-foreground mt-1">We'll show suppliers that deliver to your area</p>
+          <p className="text-sm text-muted-foreground mt-1 mb-3">Or use GPS to detect automatically</p>
+          <Button variant="outline" className="rounded-xl gap-2" onClick={handleGPS} disabled={gpsLoading}>
+            <Locate className="h-4 w-4" /> {gpsLoading ? "Detecting..." : "Use My Location"}
+          </Button>
         </motion.div>
       )}
 
