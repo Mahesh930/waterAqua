@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from "react";
-import { Star, MapPin, Clock, Droplets, Search, Navigation, ShoppingCart, Truck as TruckIcon, ChevronRight } from "lucide-react";
+import { Star, MapPin, Clock, Droplets, Search, Navigation, ShoppingCart, Truck as TruckIcon, ChevronRight, Locate } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -9,6 +9,7 @@ import { useQuery } from "@tanstack/react-query";
 import { motion } from "framer-motion";
 import { usePincode } from "@/hooks/use-pincode";
 import { estimateDeliveryTime } from "@/lib/delivery-estimate";
+import { useToast } from "@/hooks/use-toast";
 
 const container = { hidden: {}, show: { transition: { staggerChildren: 0.06 } } };
 const item = { hidden: { opacity: 0, y: 20 }, show: { opacity: 1, y: 0 } };
@@ -17,8 +18,29 @@ export default function BrowseSuppliers() {
   const [search, setSearch] = useState("");
   const [pincodeInput, setPincodeInput] = useState("");
   const [sortBy, setSortBy] = useState<"rating" | "price" | "name">("rating");
+  const [gpsLoading, setGpsLoading] = useState(false);
   const navigate = useNavigate();
   const { lookup, data: pincodeData, loading: pincodeLoading } = usePincode();
+  const { toast } = useToast();
+
+  const handleGPS = () => {
+    if (!navigator.geolocation) { toast({ title: "GPS not supported", variant: "destructive" }); return; }
+    setGpsLoading(true);
+    navigator.geolocation.getCurrentPosition(
+      async (pos) => {
+        try {
+          const res = await fetch(`https://nominatim.openstreetmap.org/reverse?lat=${pos.coords.latitude}&lon=${pos.coords.longitude}&format=json&addressdetails=1`);
+          const data = await res.json();
+          const postcode = data.address?.postcode;
+          if (postcode && postcode.length === 6) setPincodeInput(postcode);
+          else toast({ title: "Could not detect pincode", description: "Please enter manually" });
+        } catch { toast({ title: "Location lookup failed", variant: "destructive" }); }
+        setGpsLoading(false);
+      },
+      () => { toast({ title: "Location access denied", variant: "destructive" }); setGpsLoading(false); },
+      { enableHighAccuracy: true, timeout: 10000 }
+    );
+  };
 
   const { data: suppliers = [], isLoading } = useQuery({
     queryKey: ["suppliers"],
@@ -103,15 +125,21 @@ export default function BrowseSuppliers() {
             <Input placeholder="Search supplier or water type..." value={search} onChange={e => setSearch(e.target.value)} 
               className="pl-10 rounded-xl h-11 bg-muted/30 border-0 focus-visible:ring-primary/30" />
           </div>
-          <div className="relative w-full sm:w-52">
-            <Navigation className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-primary" />
-            <Input 
-              placeholder="Enter Pincode" 
-              value={pincodeInput} 
-              onChange={e => setPincodeInput(e.target.value.replace(/\D/g, "").slice(0, 6))} 
-              className="pl-10 rounded-xl h-11 bg-primary/5 border-primary/20 focus-visible:ring-primary/30 font-medium" 
-              maxLength={6}
-            />
+          <div className="flex gap-2">
+            <div className="relative flex-1 sm:w-44">
+              <Navigation className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-primary" />
+              <Input 
+                placeholder="Pincode" 
+                value={pincodeInput} 
+                onChange={e => setPincodeInput(e.target.value.replace(/\D/g, "").slice(0, 6))} 
+                className="pl-10 rounded-xl h-11 bg-primary/5 border-primary/20 focus-visible:ring-primary/30 font-medium" 
+                maxLength={6}
+              />
+            </div>
+            <Button variant="outline" size="icon" className="h-11 w-11 rounded-xl shrink-0"
+              onClick={handleGPS} disabled={gpsLoading}>
+              <Locate className={`h-4 w-4 ${gpsLoading ? "animate-pulse" : ""}`} />
+            </Button>
           </div>
         </div>
         {pincodeLoading && <p className="text-xs text-primary animate-pulse mt-2">🔍 Looking up pincode...</p>}
@@ -133,7 +161,10 @@ export default function BrowseSuppliers() {
             <Navigation className="h-8 w-8 text-primary" />
           </div>
           <h3 className="font-heading font-semibold text-lg">Enter your delivery pincode</h3>
-          <p className="text-sm text-muted-foreground mt-1">We'll show suppliers that deliver to your area</p>
+          <p className="text-sm text-muted-foreground mt-1 mb-3">Or use GPS to detect automatically</p>
+          <Button variant="outline" className="rounded-xl gap-2" onClick={handleGPS} disabled={gpsLoading}>
+            <Locate className="h-4 w-4" /> {gpsLoading ? "Detecting..." : "Use My Location"}
+          </Button>
         </motion.div>
       )}
 
