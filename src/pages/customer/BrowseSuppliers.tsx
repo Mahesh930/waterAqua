@@ -125,15 +125,21 @@ export default function BrowseSuppliers() {
             <Input placeholder="Search supplier or water type..." value={search} onChange={e => setSearch(e.target.value)} 
               className="pl-10 rounded-xl h-11 bg-muted/30 border-0 focus-visible:ring-primary/30" />
           </div>
-          <div className="relative w-full sm:w-52">
-            <Navigation className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-primary" />
-            <Input 
-              placeholder="Enter Pincode" 
-              value={pincodeInput} 
-              onChange={e => setPincodeInput(e.target.value.replace(/\D/g, "").slice(0, 6))} 
-              className="pl-10 rounded-xl h-11 bg-primary/5 border-primary/20 focus-visible:ring-primary/30 font-medium" 
-              maxLength={6}
-            />
+          <div className="flex gap-2">
+            <div className="relative flex-1 sm:w-44">
+              <Navigation className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-primary" />
+              <Input 
+                placeholder="Pincode" 
+                value={pincodeInput} 
+                onChange={e => setPincodeInput(e.target.value.replace(/\D/g, "").slice(0, 6))} 
+                className="pl-10 rounded-xl h-11 bg-primary/5 border-primary/20 focus-visible:ring-primary/30 font-medium" 
+                maxLength={6}
+              />
+            </div>
+            <Button variant="outline" size="icon" className="h-11 w-11 rounded-xl shrink-0"
+              onClick={handleGPS} disabled={gpsLoading}>
+              <Locate className={`h-4 w-4 ${gpsLoading ? "animate-pulse" : ""}`} />
+            </Button>
           </div>
         </div>
         {pincodeLoading && <p className="text-xs text-primary animate-pulse mt-2">🔍 Looking up pincode...</p>}
