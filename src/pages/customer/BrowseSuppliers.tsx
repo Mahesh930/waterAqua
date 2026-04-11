@@ -18,8 +18,29 @@ export default function BrowseSuppliers() {
   const [search, setSearch] = useState("");
   const [pincodeInput, setPincodeInput] = useState("");
   const [sortBy, setSortBy] = useState<"rating" | "price" | "name">("rating");
+  const [gpsLoading, setGpsLoading] = useState(false);
   const navigate = useNavigate();
   const { lookup, data: pincodeData, loading: pincodeLoading } = usePincode();
+  const { toast } = useToast();
+
+  const handleGPS = () => {
+    if (!navigator.geolocation) { toast({ title: "GPS not supported", variant: "destructive" }); return; }
+    setGpsLoading(true);
+    navigator.geolocation.getCurrentPosition(
+      async (pos) => {
+        try {
+          const res = await fetch(`https://nominatim.openstreetmap.org/reverse?lat=${pos.coords.latitude}&lon=${pos.coords.longitude}&format=json&addressdetails=1`);
+          const data = await res.json();
+          const postcode = data.address?.postcode;
+          if (postcode && postcode.length === 6) setPincodeInput(postcode);
+          else toast({ title: "Could not detect pincode", description: "Please enter manually" });
+        } catch { toast({ title: "Location lookup failed", variant: "destructive" }); }
+        setGpsLoading(false);
+      },
+      () => { toast({ title: "Location access denied", variant: "destructive" }); setGpsLoading(false); },
+      { enableHighAccuracy: true, timeout: 10000 }
+    );
+  };
 
   const { data: suppliers = [], isLoading } = useQuery({
     queryKey: ["suppliers"],
