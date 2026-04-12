@@ -1,6 +1,6 @@
 import { useEffect } from "react";
 import { Link } from "react-router-dom";
-import { Package, CheckCircle, Truck, IndianRupee, ChevronRight, Clock, Star, MapPin, Droplets, Zap, Shield, TrendingUp } from "lucide-react";
+import { Package, CheckCircle, Truck, IndianRupee, ChevronRight, Clock, Star, MapPin, Droplets, Zap, Shield, TrendingUp, ClipboardList } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
@@ -82,7 +82,8 @@ export default function SupplierHome() {
   ];
 
   const quickActions = [
-    { icon: Package, label: "Manage Orders", desc: "Accept & dispatch", path: "/supplier/orders", color: "from-primary to-blue-600", ring: "ring-primary/20" },
+    { icon: Package, label: "Products", desc: "Manage catalog", path: "/supplier/products", color: "from-blue-500 to-cyan-600", ring: "ring-blue-500/20" },
+    { icon: ClipboardList, label: "Orders", desc: "Accept & dispatch", path: "/supplier/orders", color: "from-primary to-blue-600", ring: "ring-primary/20" },
     { icon: IndianRupee, label: "Payments", desc: "Track earnings", path: "/supplier/payments", color: "from-emerald-500 to-teal-600", ring: "ring-emerald-500/20" },
     { icon: TrendingUp, label: "Reports", desc: "Analytics & trends", path: "/supplier/reports", color: "from-violet-500 to-purple-600", ring: "ring-violet-500/20" },
     { icon: Star, label: "Profile", desc: "Business settings", path: "/supplier/profile", color: "from-amber-500 to-orange-600", ring: "ring-amber-500/20" },

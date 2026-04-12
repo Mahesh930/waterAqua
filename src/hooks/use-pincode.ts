@@ -49,5 +49,7 @@ export function usePincode() {
     }
   }, []);
 
-  return { lookup, data, loading, error };
+  const reset = useCallback(() => { setData(null); setError(null); }, []);
+
+  return { lookup, data, loading, error, reset };
 }

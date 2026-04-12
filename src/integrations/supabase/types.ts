@@ -354,6 +354,47 @@ export type Database = {
         }
         Relationships: []
       }
+      supplier_service_areas: {
+        Row: {
+          active: boolean
+          area_name: string
+          city: string
+          created_at: string
+          id: string
+          pincode: string
+          state: string
+          supplier_id: string
+        }
+        Insert: {
+          active?: boolean
+          area_name?: string
+          city?: string
+          created_at?: string
+          id?: string
+          pincode: string
+          state?: string
+          supplier_id: string
+        }
+        Update: {
+          active?: boolean
+          area_name?: string
+          city?: string
+          created_at?: string
+          id?: string
+          pincode?: string
+          state?: string
+          supplier_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "supplier_service_areas_supplier_id_fkey"
+            columns: ["supplier_id"]
+            isOneToOne: false
+            referencedRelation: "suppliers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       suppliers: {
         Row: {
           area: string

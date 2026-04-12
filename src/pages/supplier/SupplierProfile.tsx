@@ -9,6 +9,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { motion } from "framer-motion";
 import { usePincode } from "@/hooks/use-pincode";
+import ServiceAreaManager from "@/components/supplier/ServiceAreaManager";
 import { Switch } from "@/components/ui/switch";
 
 const container = { hidden: {}, show: { transition: { staggerChildren: 0.06 } } };
@@ -178,6 +179,13 @@ export default function SupplierProfile() {
           <div className="sm:col-span-2"><Label className="text-xs flex items-center gap-1"><Hash className="h-3 w-3" /> Vehicle Number</Label><Input className="mt-1 rounded-xl" placeholder="MH 12 AB 1234" value={form.vehicle_number} onChange={e => setForm({ ...form, vehicle_number: e.target.value })} /></div>
         </div>
       </motion.div>
+
+      {/* Service Areas */}
+      {supplier && (
+        <motion.div variants={item} className="glass-card rounded-2xl p-5">
+          <ServiceAreaManager supplierId={supplier.id} />
+        </motion.div>
+      )}
 
       <motion.div variants={item}>
         <Button onClick={handleSave} className="rounded-xl w-full h-12 text-base font-semibold gap-2 shadow-md shadow-primary/10" size="lg">

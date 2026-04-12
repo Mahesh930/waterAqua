@@ -44,6 +44,19 @@ export default function ProductCatalog() {
     },
   });
 
+  // Fetch all service areas for filtering
+  const { data: serviceAreas = [] } = useQuery({
+    queryKey: ["all-service-areas"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("supplier_service_areas")
+        .select("supplier_id, pincode, area_name, city")
+        .eq("active", true);
+      if (error) throw error;
+      return data as any[];
+    },
+  });
+
   useEffect(() => {
     if (pincodeInput.length === 6) lookup(pincodeInput);
   }, [pincodeInput, lookup]);
@@ -87,11 +100,23 @@ export default function ProductCatalog() {
       return s && !s.blocked && s.available;
     });
 
-    // Pincode filtering
+    // Pincode filtering: check both supplier pincode AND service areas
     if (pincodeData && pincodeInput.length === 6) {
+      const supplierIdsServicing = new Set(
+        serviceAreas
+          .filter(sa => sa.pincode === pincodeInput || 
+            sa.area_name?.toLowerCase().includes(pincodeData.area.toLowerCase()) ||
+            sa.city?.toLowerCase().includes(pincodeData.city.toLowerCase()))
+          .map(sa => sa.supplier_id)
+      );
+
       list = list.filter(p => {
         const sup = p.suppliers;
+        // Match by supplier's own pincode
         if (sup.pincode === pincodeInput) return true;
+        // Match by service areas
+        if (supplierIdsServicing.has(sup.id)) return true;
+        // Fallback: area text match
         const area = sup.area?.toLowerCase() || "";
         return area.includes(pincodeData.area.toLowerCase()) || area.includes(pincodeData.city.toLowerCase());
       });
@@ -103,7 +128,7 @@ export default function ProductCatalog() {
       list = list.filter(p => p.name.toLowerCase().includes(q) || p.suppliers?.business_name?.toLowerCase().includes(q));
     }
     return list;
-  }, [products, pincodeData, pincodeInput, category, search]);
+  }, [products, serviceAreas, pincodeData, pincodeInput, category, search]);
 
   const hasPincode = pincodeInput.length === 6 && pincodeData;
 
