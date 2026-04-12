@@ -1,6 +1,6 @@
 import { useEffect } from "react";
 import { Link } from "react-router-dom";
-import { Package, CheckCircle, Truck, IndianRupee, ChevronRight, Clock, Star, MapPin, Droplets, Zap, Shield, TrendingUp } from "lucide-react";
+import { Package, CheckCircle, Truck, IndianRupee, ChevronRight, Clock, Star, MapPin, Droplets, Zap, Shield, TrendingUp, ClipboardList } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
