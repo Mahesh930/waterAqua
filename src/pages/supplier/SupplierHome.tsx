@@ -133,7 +133,7 @@ export default function SupplierHome() {
 
       {/* Quick Actions */}
       <motion.div variants={item}>
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
           {quickActions.map(action => (
             <Link key={action.path} to={action.path}>
               <motion.div 
