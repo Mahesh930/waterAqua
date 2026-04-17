@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
@@ -6,7 +6,7 @@ import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import { Plus, Pencil, Trash2, Package, Droplets, X, Save, ImagePlus } from "lucide-react";
+import { Plus, Pencil, Trash2, Package, X, Save, ImagePlus, Upload, Loader2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
@@ -36,6 +36,32 @@ export default function SupplierProducts() {
   const [showAdd, setShowAdd] = useState(false);
   const [form, setForm] = useState(emptyProduct);
   const [filter, setFilter] = useState("all");
+  const [uploading, setUploading] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !user) return;
+    if (file.size > 5 * 1024 * 1024) {
+      toast({ title: "File too large", description: "Max 5MB", variant: "destructive" });
+      return;
+    }
+    setUploading(true);
+    try {
+      const ext = file.name.split(".").pop();
+      const path = `${user.id}/${Date.now()}.${ext}`;
+      const { error: upErr } = await supabase.storage.from("product-images").upload(path, file, { upsert: false });
+      if (upErr) throw upErr;
+      const { data } = supabase.storage.from("product-images").getPublicUrl(path);
+      setForm(f => ({ ...f, image_url: data.publicUrl }));
+      toast({ title: "Image uploaded ✅" });
+    } catch (err: any) {
+      toast({ title: "Upload failed", description: err.message, variant: "destructive" });
+    } finally {
+      setUploading(false);
+      if (fileInputRef.current) fileInputRef.current.value = "";
+    }
+  };
 
   const { data: supplier } = useQuery({
     queryKey: ["my-supplier", user?.id],
@@ -208,10 +234,32 @@ export default function SupplierProducts() {
                 <Input type="number" className="mt-1 rounded-xl" value={form.stock}
                   onChange={e => setForm({ ...form, stock: Number(e.target.value) })} />
               </div>
-              <div>
-                <Label className="text-xs">Image URL (optional)</Label>
-                <Input className="mt-1 rounded-xl" placeholder="https://..." value={form.image_url}
-                  onChange={e => setForm({ ...form, image_url: e.target.value })} />
+              <div className="sm:col-span-2">
+                <Label className="text-xs">Product Image</Label>
+                <div className="mt-1 flex items-center gap-3">
+                  {form.image_url ? (
+                    <div className="relative h-20 w-20 rounded-xl overflow-hidden border-2 border-primary/20 shrink-0">
+                      <img src={form.image_url} alt="preview" className="h-full w-full object-cover" />
+                      <button type="button" onClick={() => setForm({ ...form, image_url: "" })}
+                        className="absolute top-0.5 right-0.5 h-5 w-5 rounded-full bg-destructive text-destructive-foreground flex items-center justify-center shadow-md">
+                        <X className="h-3 w-3" />
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="h-20 w-20 rounded-xl bg-muted/40 border-2 border-dashed border-muted-foreground/30 flex items-center justify-center shrink-0">
+                      <ImagePlus className="h-6 w-6 text-muted-foreground/60" />
+                    </div>
+                  )}
+                  <div className="flex-1 space-y-2">
+                    <input ref={fileInputRef} type="file" accept="image/*" onChange={handleImageUpload} className="hidden" />
+                    <Button type="button" variant="outline" size="sm" className="rounded-xl gap-2 w-full"
+                      onClick={() => fileInputRef.current?.click()} disabled={uploading}>
+                      {uploading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Upload className="h-3.5 w-3.5" />}
+                      {uploading ? "Uploading..." : form.image_url ? "Change Image" : "Upload Image"}
+                    </Button>
+                    <p className="text-[10px] text-muted-foreground">JPG, PNG up to 5MB. Square images work best.</p>
+                  </div>
+                </div>
               </div>
               <div className="sm:col-span-2">
                 <Label className="text-xs">Description (optional)</Label>
