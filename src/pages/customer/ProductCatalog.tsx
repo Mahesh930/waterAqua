@@ -129,6 +129,7 @@ export default function ProductCatalog() {
     const cityLower = pincodeData.city?.toLowerCase() || "";
     const areaLower = pincodeData.area?.toLowerCase() || "";
 
+    // Build set of supplier IDs that explicitly service this pincode/area
     const servicingSupplierIds = new Set(
       serviceAreas
         .filter(sa => {
@@ -136,31 +137,40 @@ export default function ProductCatalog() {
           if (sa.pincode?.slice(0, 3) === pincodePrefix) return true;
           const saCity = sa.city?.toLowerCase() || "";
           const saArea = sa.area_name?.toLowerCase() || "";
-          return saCity.includes(cityLower) || saArea.includes(areaLower) ||
-            cityLower.includes(saCity) || districtLower.includes(saCity);
+          return (saCity && cityLower && (saCity.includes(cityLower) || cityLower.includes(saCity))) ||
+            (saArea && areaLower && saArea.includes(areaLower));
         })
         .map(sa => sa.supplier_id)
     );
 
-    const nearby: any[] = [];
+    const serving: any[] = [];
     const other: any[] = [];
 
     list.forEach(p => {
       const sup = p.suppliers;
       const supPincode = sup.pincode || "";
       const supArea = sup.area?.toLowerCase() || "";
-      const isNearby =
-        supPincode === pincodeInput ||
-        supPincode.slice(0, 3) === pincodePrefix ||
-        servicingSupplierIds.has(sup.id) ||
-        supArea.includes(districtLower) ||
-        supArea.includes(cityLower) ||
-        districtLower.includes(supArea.split(",")[0]?.trim() || "");
-      if (isNearby) nearby.push(p);
-      else other.push(p);
+
+      // STRICT: supplier must explicitly serve this area
+      const exactPincode = supPincode === pincodeInput;
+      const sameDistrict = supPincode && supPincode.slice(0, 3) === pincodePrefix;
+      const hasServiceArea = servicingSupplierIds.has(sup.id);
+      const areaTextMatch = supArea && (
+        (cityLower && supArea.includes(cityLower)) ||
+        (districtLower && supArea.includes(districtLower))
+      );
+
+      if (exactPincode || hasServiceArea) {
+        serving.push(p);
+      } else if (sameDistrict || areaTextMatch) {
+        // Same district but no explicit service area — show as nearby
+        serving.push(p);
+      } else {
+        other.push(p);
+      }
     });
 
-    return { nearbyProducts: nearby, otherProducts: other };
+    return { nearbyProducts: serving, otherProducts: other };
   }, [products, serviceAreas, pincodeData, pincodeInput, category, search]);
 
   const hasPincode = pincodeInput.length === 6 && pincodeData;
