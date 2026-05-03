@@ -9,6 +9,12 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
+import { XCircle } from "lucide-react";
+import {
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
+  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
+import { useToast } from "@/hooks/use-toast";
 
 const statusSteps = [
   { key: "placed", label: "Order Placed", icon: Package, description: "Waiting for supplier to confirm your order", color: "text-warning" },
@@ -27,6 +33,17 @@ const item = { hidden: { opacity: 0, y: 20 }, show: { opacity: 1, y: 0 } };
 export default function TrackOrder() {
   const { user } = useAuth();
   const queryClient = useQueryClient();
+  const { toast } = useToast();
+
+  const cancelOrder = async (orderId: string) => {
+    const { error } = await supabase.from("orders").update({ status: "cancelled" as any }).eq("id", orderId).eq("customer_id", user!.id);
+    if (error) {
+      toast({ title: "Cancel failed", description: error.message, variant: "destructive" });
+    } else {
+      toast({ title: "Order Cancelled", description: "Your order has been cancelled successfully." });
+      queryClient.invalidateQueries({ queryKey: ["active-orders"] });
+    }
+  };
 
   const { data: activeOrders = [], isLoading } = useQuery({
     queryKey: ["active-orders", user?.id],
