@@ -9,6 +9,12 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
+import { XCircle } from "lucide-react";
+import {
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
+  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
+import { useToast } from "@/hooks/use-toast";
 
 const statusSteps = [
   { key: "placed", label: "Order Placed", icon: Package, description: "Waiting for supplier to confirm your order", color: "text-warning" },
@@ -27,6 +33,17 @@ const item = { hidden: { opacity: 0, y: 20 }, show: { opacity: 1, y: 0 } };
 export default function TrackOrder() {
   const { user } = useAuth();
   const queryClient = useQueryClient();
+  const { toast } = useToast();
+
+  const cancelOrder = async (orderId: string) => {
+    const { error } = await supabase.from("orders").update({ status: "cancelled" as any }).eq("id", orderId).eq("customer_id", user!.id);
+    if (error) {
+      toast({ title: "Cancel failed", description: error.message, variant: "destructive" });
+    } else {
+      toast({ title: "Order Cancelled", description: "Your order has been cancelled successfully." });
+      queryClient.invalidateQueries({ queryKey: ["active-orders"] });
+    }
+  };
 
   const { data: activeOrders = [], isLoading } = useQuery({
     queryKey: ["active-orders", user?.id],
@@ -215,6 +232,32 @@ export default function TrackOrder() {
                     <div className="flex items-center gap-1.5 text-xs font-medium text-primary bg-primary/5 px-3 py-1.5 rounded-lg border border-primary/10">
                       <Clock className="h-3 w-3" /> ETA: {supplierData.delivery_time}
                     </div>
+                  )}
+                  {(order.status === "placed" || order.status === "confirmed") && (
+                    <AlertDialog>
+                      <AlertDialogTrigger asChild>
+                        <Button size="sm" variant="outline"
+                          className="ml-auto rounded-lg gap-1.5 text-xs h-8 text-destructive border-destructive/30 hover:bg-destructive/10 hover:text-destructive">
+                          <XCircle className="h-3.5 w-3.5" /> Cancel Order
+                        </Button>
+                      </AlertDialogTrigger>
+                      <AlertDialogContent>
+                        <AlertDialogHeader>
+                          <AlertDialogTitle>Cancel this order?</AlertDialogTitle>
+                          <AlertDialogDescription>
+                            Order #{order.id.slice(0, 6)} from {supplierData?.business_name ?? "supplier"} will be cancelled.
+                            This action cannot be undone.
+                          </AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <AlertDialogFooter>
+                          <AlertDialogCancel>Keep Order</AlertDialogCancel>
+                          <AlertDialogAction onClick={() => cancelOrder(order.id)}
+                            className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+                            Yes, Cancel
+                          </AlertDialogAction>
+                        </AlertDialogFooter>
+                      </AlertDialogContent>
+                    </AlertDialog>
                   )}
                 </div>
               </motion.div>

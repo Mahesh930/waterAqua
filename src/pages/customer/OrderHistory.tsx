@@ -8,6 +8,10 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
+import {
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
+  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 
 const statusColors: Record<string, string> = {
   placed: "bg-warning/10 text-warning border-warning/20",
@@ -305,9 +309,28 @@ export default function OrderHistory() {
                         {/* Actions */}
                         <div className="flex gap-2 flex-wrap">
                           {canCancel && (
-                            <Button size="sm" variant="destructive" className="gap-1.5 rounded-xl text-xs h-8" onClick={() => cancelOrder(order.id)}>
-                              <XCircle className="h-3 w-3" /> Cancel
-                            </Button>
+                            <AlertDialog>
+                              <AlertDialogTrigger asChild>
+                                <Button size="sm" variant="destructive" className="gap-1.5 rounded-xl text-xs h-8">
+                                  <XCircle className="h-3 w-3" /> Cancel
+                                </Button>
+                              </AlertDialogTrigger>
+                              <AlertDialogContent>
+                                <AlertDialogHeader>
+                                  <AlertDialogTitle>Cancel this order?</AlertDialogTitle>
+                                  <AlertDialogDescription>
+                                    Order #{order.id.slice(0, 6)} will be cancelled. This cannot be undone.
+                                  </AlertDialogDescription>
+                                </AlertDialogHeader>
+                                <AlertDialogFooter>
+                                  <AlertDialogCancel>Keep Order</AlertDialogCancel>
+                                  <AlertDialogAction onClick={() => cancelOrder(order.id)}
+                                    className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+                                    Yes, Cancel
+                                  </AlertDialogAction>
+                                </AlertDialogFooter>
+                              </AlertDialogContent>
+                            </AlertDialog>
                           )}
                           {order.status === "delivered" && (
                             <Button size="sm" variant="outline" className="gap-1.5 rounded-xl text-xs h-8 glass" onClick={() => setReceiptOrder(order)}>
