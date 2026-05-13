@@ -198,7 +198,9 @@ export default function BrowseSuppliers() {
                   {/* Card Header */}
                   <div className="relative h-20 bg-gradient-to-br from-primary/10 via-accent/5 to-transparent p-4">
                     <div className="flex items-start justify-between">
-                      <div className="h-14 w-14 rounded-2xl bg-card shadow-lg flex items-center justify-center text-2xl border border-border/50">🚛</div>
+                      <div className="h-14 w-14 rounded-2xl bg-card shadow-lg flex items-center justify-center overflow-hidden border border-border/50">
+                        <img src="/product-images/tanker-5k-10k.png" alt="Supplier" className="h-full w-full object-cover" />
+                      </div>
                       <div className="flex items-center gap-1.5">
                         {s.available && s.stock > 0 && (
                           <span className="flex items-center gap-1 text-[10px] font-semibold text-success bg-success/10 px-2 py-0.5 rounded-full">

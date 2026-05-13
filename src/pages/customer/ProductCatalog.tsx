@@ -1,35 +1,23 @@
-import { useState, useMemo, useEffect } from "react";
-import { Search, MapPin, Navigation, Plus, Droplets, Star, Clock, Locate, Truck, Sparkles, Zap, Shield, TrendingUp } from "lucide-react";
-import { Input } from "@/components/ui/input";
+import { useEffect, useMemo, useState } from "react";
+import { Clock, Droplets, Locate, MapPin, Navigation, Plus, Search, Star } from "lucide-react";
+import { useQuery } from "@tanstack/react-query";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { supabase } from "@/integrations/supabase/client";
-import { useQuery } from "@tanstack/react-query";
+import { Input } from "@/components/ui/input";
 import { useCart } from "@/hooks/use-cart";
 import { usePincode } from "@/hooks/use-pincode";
 import { estimateDeliveryTime } from "@/lib/delivery-estimate";
-import { motion } from "framer-motion";
+import { getProductImageUrl } from "@/lib/product-images";
 import { useToast } from "@/hooks/use-toast";
-
-const container = { hidden: {}, show: { transition: { staggerChildren: 0.04 } } };
-const item = { hidden: { opacity: 0, y: 16 }, show: { opacity: 1, y: 0, transition: { duration: 0.35 } } };
+import { supabase } from "@/integrations/supabase/client";
 
 const categories = [
-  { key: "all", label: "All Products", icon: "💧", gradient: "from-primary to-blue-600" },
-  { key: "bottle", label: "Bottles", icon: "🍶", gradient: "from-blue-500 to-cyan-500" },
-  { key: "can", label: "Cans", icon: "🪣", gradient: "from-emerald-500 to-teal-500" },
-  { key: "jar", label: "Jars", icon: "🫙", gradient: "from-violet-500 to-purple-500" },
-  { key: "tanker", label: "Tankers", icon: "🚛", gradient: "from-amber-500 to-orange-500" },
+  { key: "all", label: "All Products" },
+  { key: "bottle", label: "Bottles" },
+  { key: "can", label: "Cans" },
+  { key: "jar", label: "Jars" },
+  { key: "tanker", label: "Tankers" },
 ];
-
-const catGradient = (cat: string) =>
-  cat === "bottle" ? "from-blue-500/30 via-cyan-400/15 to-transparent" :
-  cat === "tanker" ? "from-amber-500/30 via-orange-400/15 to-transparent" :
-  cat === "jar" ? "from-violet-500/30 via-purple-400/15 to-transparent" :
-  "from-emerald-500/30 via-teal-400/15 to-transparent";
-
-const catIcon = (cat: string) =>
-  cat === "bottle" ? "🍶" : cat === "tanker" ? "🚛" : cat === "jar" ? "🫙" : "🪣";
 
 export default function ProductCatalog() {
   const [search, setSearch] = useState("");
@@ -80,6 +68,7 @@ export default function ProductCatalog() {
       toast({ title: "GPS not supported", variant: "destructive" });
       return;
     }
+
     setGpsLoading(true);
     navigator.geolocation.getCurrentPosition(
       async (pos) => {
@@ -91,7 +80,7 @@ export default function ProductCatalog() {
           const postcode = data.address?.postcode;
           if (postcode && postcode.length === 6) {
             setPincodeInput(postcode);
-            toast({ title: "📍 Location detected!", description: `Pincode: ${postcode}` });
+            toast({ title: "Location detected", description: `Pincode: ${postcode}` });
           } else {
             toast({ title: "Could not detect pincode", description: "Please enter manually" });
           }
@@ -104,14 +93,14 @@ export default function ProductCatalog() {
         toast({ title: "Location access denied", variant: "destructive" });
         setGpsLoading(false);
       },
-      { enableHighAccuracy: true, timeout: 10000 }
+      { enableHighAccuracy: true, timeout: 10000 },
     );
   };
 
   const { nearbyProducts, otherProducts } = useMemo(() => {
     let list = products.filter(p => {
-      const s = p.suppliers;
-      return s && !s.blocked && s.available;
+      const supplier = p.suppliers;
+      return supplier && !supplier.blocked && supplier.available;
     });
 
     if (category !== "all") list = list.filter(p => p.category === category);
@@ -119,6 +108,14 @@ export default function ProductCatalog() {
       const q = search.toLowerCase();
       list = list.filter(p => p.name.toLowerCase().includes(q) || p.suppliers?.business_name?.toLowerCase().includes(q));
     }
+
+    const seenProducts = new Set<string>();
+    list = list.filter(p => {
+      const key = `${p.supplier_id}-${p.category}-${Number(p.size_liters)}`;
+      if (seenProducts.has(key)) return false;
+      seenProducts.add(key);
+      return true;
+    });
 
     if (!pincodeData || pincodeInput.length !== 6) {
       return { nearbyProducts: list, otherProducts: [] as any[] };
@@ -129,7 +126,6 @@ export default function ProductCatalog() {
     const cityLower = pincodeData.city?.toLowerCase() || "";
     const areaLower = pincodeData.area?.toLowerCase() || "";
 
-    // Build set of supplier IDs that explicitly service this pincode/area
     const servicingSupplierIds = new Set(
       serviceAreas
         .filter(sa => {
@@ -140,35 +136,34 @@ export default function ProductCatalog() {
           return (saCity && cityLower && (saCity.includes(cityLower) || cityLower.includes(saCity))) ||
             (saArea && areaLower && saArea.includes(areaLower));
         })
-        .map(sa => sa.supplier_id)
+        .map(sa => sa.supplier_id),
     );
 
     const serving: any[] = [];
     const other: any[] = [];
 
     list.forEach(p => {
-      const sup = p.suppliers;
-      const supPincode = sup.pincode || "";
-      const supArea = sup.area?.toLowerCase() || "";
+      const supplier = p.suppliers;
+      const supplierPincode = supplier.pincode || "";
+      const supplierArea = supplier.area?.toLowerCase() || "";
 
-      // STRICT: supplier must explicitly serve this area
-      const exactPincode = supPincode === pincodeInput;
-      const sameDistrict = supPincode && supPincode.slice(0, 3) === pincodePrefix;
-      const hasServiceArea = servicingSupplierIds.has(sup.id);
-      const areaTextMatch = supArea && (
-        (cityLower && supArea.includes(cityLower)) ||
-        (districtLower && supArea.includes(districtLower))
-      );
+      // Calculate distance using our heuristic
+      const { distanceKm } = estimateDeliveryTime(supplierPincode, pincodeInput);
+      p.distanceKm = distanceKm; // Attach for rendering
 
-      if (exactPincode || hasServiceArea) {
-        serving.push(p);
-      } else if (sameDistrict || areaTextMatch) {
-        // Same district but no explicit service area — show as nearby
+      const exactPincode = supplierPincode === pincodeInput;
+      const hasServiceArea = servicingSupplierIds.has(supplier.id);
+      const isClose = distanceKm < 5; // The 5KM requirement
+
+      if (exactPincode || hasServiceArea || isClose) {
         serving.push(p);
       } else {
         other.push(p);
       }
     });
+
+    // Sort serving by distance
+    serving.sort((a, b) => (a.distanceKm || 0) - (b.distanceKm || 0));
 
     return { nearbyProducts: serving, otherProducts: other };
   }, [products, serviceAreas, pincodeData, pincodeInput, category, search]);
@@ -176,306 +171,215 @@ export default function ProductCatalog() {
   const hasPincode = pincodeInput.length === 6 && pincodeData;
   const totalResults = nearbyProducts.length + otherProducts.length;
 
-  const renderProduct = (p: any) => {
-    const eta = hasPincode ? estimateDeliveryTime(p.suppliers?.pincode, pincodeInput) : null;
-    const inStock = p.stock > 0;
+  const renderProduct = (product: any) => {
+    const eta = hasPincode ? estimateDeliveryTime(product.suppliers?.pincode, pincodeInput) : null;
+    const inStock = product.stock > 0;
+    const imageUrl = getProductImageUrl(product);
+
     return (
-      <motion.div key={p.id} variants={item}
-        whileHover={{ y: -6, transition: { duration: 0.2 } }}
-        className="group relative">
-        {/* Glow effect on hover */}
-        <div className="absolute -inset-0.5 bg-gradient-to-br from-primary/40 via-accent/30 to-primary/40 rounded-3xl opacity-0 group-hover:opacity-100 blur-md transition-opacity duration-300" />
-        
-        <div className="relative glass-card rounded-3xl overflow-hidden h-full flex flex-col">
-          {/* Image area with rich gradient */}
-          <div className={`relative h-40 bg-gradient-to-br ${catGradient(p.category)} flex items-center justify-center overflow-hidden`}>
-            {/* Decorative bubbles */}
-            <div className="absolute top-3 right-6 h-8 w-8 rounded-full bg-white/30 blur-sm" />
-            <div className="absolute bottom-4 left-4 h-12 w-12 rounded-full bg-white/20 blur-md" />
-            <div className="absolute top-1/2 left-1/3 h-6 w-6 rounded-full bg-white/25 blur-sm" />
-            
-            {p.image_url ? (
-              <img src={p.image_url} alt={p.name} className="relative h-full w-full object-cover" />
-            ) : (
-              <motion.span 
-                className="relative text-6xl drop-shadow-lg"
-                whileHover={{ scale: 1.15, rotate: -5 }}
-                transition={{ type: "spring", stiffness: 300 }}
-              >
-                {catIcon(p.category)}
-              </motion.span>
-            )}
-            
-            {/* Size badge - top left */}
-            <Badge className="absolute top-3 left-3 bg-card/90 backdrop-blur-md text-foreground border-0 font-bold text-xs px-2.5 py-1 shadow-md">
-              {Number(p.size_liters)}L
-            </Badge>
-            
-            {/* Stock status - top right */}
-            {!inStock ? (
-              <Badge variant="destructive" className="absolute top-3 right-3 text-[10px] shadow-md">Out of stock</Badge>
-            ) : p.stock < 10 ? (
-              <Badge className="absolute top-3 right-3 bg-warning/90 text-warning-foreground border-0 text-[10px] shadow-md gap-1">
-                <Zap className="h-2.5 w-2.5" /> Only {p.stock} left
-              </Badge>
-            ) : (
-              <Badge className="absolute top-3 right-3 bg-success/90 text-success-foreground border-0 text-[10px] shadow-md">
-                In stock
-              </Badge>
+      <div key={product.id} className="bg-card border border-border rounded-xl overflow-hidden hover:border-primary/30 hover:shadow-sm transition-all flex flex-col">
+        <div className="relative h-36 bg-gradient-to-br from-muted to-muted/50 flex items-center justify-center overflow-hidden">
+          <img src={imageUrl} alt={product.name} className="h-full w-full object-contain p-2" />
+          <span className="absolute top-2 left-2 bg-card/90 backdrop-blur-sm text-xs font-medium px-2 py-0.5 rounded-md border border-border">
+            {Number(product.size_liters)}L
+          </span>
+          <span className={`absolute top-2 right-2 text-[10px] font-medium px-2 py-0.5 rounded-md ${
+            !inStock
+              ? "bg-red-50 text-red-600 dark:bg-red-900/20 dark:text-red-400"
+              : product.stock < 10
+                ? "bg-amber-50 text-amber-600 dark:bg-amber-900/20 dark:text-amber-400"
+                : "bg-emerald-50 text-emerald-600 dark:bg-emerald-900/20 dark:text-emerald-400"
+          }`}>
+            {!inStock ? "Out of stock" : product.stock < 10 ? `${product.stock} left` : "In stock"}
+          </span>
+        </div>
+
+        <div className="p-3 flex-1 flex flex-col">
+          <h4 className="font-medium text-sm line-clamp-1">{product.name}</h4>
+          <p className="text-xs text-muted-foreground truncate mt-0.5">{product.suppliers?.business_name}</p>
+
+          <div className="flex items-center gap-2 text-xs mt-2">
+            <div className="flex items-center gap-0.5">
+              <Star className="h-3 w-3 fill-amber-400 text-amber-400" />
+              <span className="font-medium">{Number(product.suppliers?.rating || 0).toFixed(1)}</span>
+            </div>
+            {product.suppliers?.area && (
+              <span className="text-muted-foreground truncate flex items-center gap-0.5">
+                <MapPin className="h-3 w-3 shrink-0" />
+                {product.suppliers.area.split(",")[0]}
+              </span>
             )}
           </div>
-          
-          {/* Content */}
-          <div className="p-4 space-y-2.5 flex-1 flex flex-col">
-            <div>
-              <h4 className="font-heading font-bold text-sm leading-tight group-hover:text-primary transition-colors line-clamp-1">
-                {p.name}
-              </h4>
-              <p className="text-[11px] text-muted-foreground truncate mt-0.5">{p.suppliers?.business_name}</p>
-            </div>
 
-            {/* Rating + Location row */}
-            <div className="flex items-center gap-2 text-[11px]">
-              <div className="flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-warning/10">
-                <Star className="h-3 w-3 fill-warning text-warning" />
-                <span className="font-bold text-warning-foreground">{Number(p.suppliers?.rating || 0).toFixed(1)}</span>
+          {eta && (
+            <div className="flex flex-col gap-1 mt-1.5">
+              <div className="flex items-center gap-1 text-xs text-primary">
+                <Clock className="h-3 w-3" />
+                <span className="font-medium">{eta.label}</span>
               </div>
-              {p.suppliers?.area && (
-                <div className="flex items-center gap-0.5 text-muted-foreground min-w-0">
-                  <MapPin className="h-3 w-3 text-primary/60 shrink-0" />
-                  <span className="truncate">{p.suppliers.area.split(",")[0]}</span>
+              {eta.distanceKm && (
+                <div className="flex items-center gap-1 text-[10px] text-muted-foreground">
+                  <Navigation className="h-2.5 w-2.5" />
+                  <span>{eta.distanceKm.toFixed(1)} KM away</span>
                 </div>
               )}
             </div>
+          )}
 
-            {/* ETA */}
-            {eta && (
-              <div className="flex items-center gap-1.5 text-[11px] px-2 py-1 rounded-lg bg-primary/8 border border-primary/15 w-fit">
-                <Clock className="h-3 w-3 text-primary" />
-                <span className="text-primary font-bold">{eta.label}</span>
-              </div>
-            )}
+          <div className="flex-1" />
 
-            {/* Spacer */}
-            <div className="flex-1" />
-
-            {/* Price + Add row */}
-            <div className="flex items-end justify-between pt-2 border-t border-border/50">
-              <div>
-                <p className="text-[10px] text-muted-foreground font-medium">Price</p>
-                <p className="font-heading font-bold text-primary text-xl leading-none">₹{Number(p.price)}</p>
-              </div>
-              <Button size="sm" className="rounded-xl h-9 px-3.5 text-xs gap-1 shadow-md hover:shadow-lg hover:scale-105 transition-all"
-                disabled={!inStock}
-                onClick={() => addToCart.mutate({ productId: p.id, supplierId: p.supplier_id })}>
-                <Plus className="h-3.5 w-3.5" /> Add
-              </Button>
+          <div className="flex items-end justify-between pt-3 mt-2 border-t border-border">
+            <div>
+              <p className="text-[10px] text-muted-foreground">Price</p>
+              <p className="font-semibold text-primary text-lg leading-none">Rs. {Number(product.price)}</p>
             </div>
+            <Button
+              size="sm"
+              className="rounded-lg h-8 px-3 text-xs gap-1"
+              disabled={!inStock}
+              onClick={() => addToCart.mutate({ productId: product.id, supplierId: product.supplier_id })}
+            >
+              <Plus className="h-3.5 w-3.5" /> Add
+            </Button>
           </div>
         </div>
-      </motion.div>
+      </div>
     );
   };
 
   return (
-    <motion.div variants={container} initial="hidden" animate="show" className="space-y-6">
-      {/* HERO HEADER */}
-      <motion.div variants={item}
-        className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-primary via-blue-600 to-accent p-6 sm:p-8 text-primary-foreground">
-        {/* Decorative blobs */}
-        <div className="absolute inset-0 opacity-20">
-          <div className="absolute top-0 right-0 h-48 w-48 rounded-full bg-white/30 blur-3xl" />
-          <div className="absolute bottom-0 left-1/4 h-40 w-40 rounded-full bg-accent/40 blur-3xl" />
-          <div className="absolute top-1/2 right-1/3 h-32 w-32 rounded-full bg-white/20 blur-2xl" />
-        </div>
-        <div className="relative z-10 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-          <div>
-            <div className="inline-flex items-center gap-2 bg-white/15 backdrop-blur-md px-3 py-1 rounded-full text-xs font-semibold mb-3">
-              <Sparkles className="h-3 w-3" /> Fresh Water Marketplace
-            </div>
-            <h2 className="font-heading text-2xl sm:text-4xl font-bold leading-tight">
-              Pure Water,<br className="sm:hidden"/> Delivered Fast 💧
-            </h2>
-            <p className="text-sm sm:text-base text-white/85 mt-2 max-w-md">
-              {hasPincode
-                ? `${nearbyProducts.length} product${nearbyProducts.length !== 1 ? "s" : ""} near ${pincodeData.area}, ${pincodeData.district}`
-                : `Browse ${totalResults}+ products from verified suppliers`}
-            </p>
-          </div>
-          {/* Floating stats card */}
-          <div className="hidden sm:flex flex-col gap-2 bg-white/10 backdrop-blur-md rounded-2xl p-4 border border-white/20 min-w-[140px]">
-            <div className="flex items-center gap-2">
-              <TrendingUp className="h-4 w-4" />
-              <span className="text-xs font-semibold">Live Stock</span>
-            </div>
-            <p className="text-2xl font-heading font-bold">{totalResults}</p>
-            <p className="text-[10px] text-white/70">products available</p>
-          </div>
-        </div>
-      </motion.div>
+    <div className="space-y-6 py-2">
+      <div>
+        <h1 className="text-2xl font-semibold">Products</h1>
+        <p className="text-sm text-muted-foreground mt-1">
+          {hasPincode
+            ? `${nearbyProducts.length} product${nearbyProducts.length !== 1 ? "s" : ""} near ${pincodeData.area}, ${pincodeData.district}`
+            : `Browse ${totalResults}+ products from verified suppliers`}
+        </p>
+      </div>
 
-      {/* SEARCH + LOCATION BAR */}
-      <motion.div variants={item} className="glass-card rounded-3xl p-4 sm:p-5 shadow-lg">
-        <div className="flex flex-col lg:flex-row gap-3">
+      <div className="bg-card border border-border rounded-xl p-4 space-y-3">
+        <div className="flex flex-col sm:flex-row gap-3">
           <div className="relative flex-1">
-            <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <Input placeholder="Search products, suppliers, brands..." value={search} onChange={e => setSearch(e.target.value)}
-              className="pl-11 rounded-2xl h-12 bg-muted/40 border-0 focus-visible:ring-2 focus-visible:ring-primary/40 text-sm font-medium" />
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input
+              placeholder="Search products, suppliers..."
+              value={search}
+              onChange={e => setSearch(e.target.value)}
+              className="pl-9 rounded-lg h-10 bg-muted/50 border-0 text-sm"
+            />
           </div>
           <div className="flex gap-2">
-            <div className="relative flex-1 lg:w-52">
-              <Navigation className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-primary" />
-              <Input placeholder="Enter pincode" value={pincodeInput}
+            <div className="relative flex-1 sm:w-40">
+              <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder="Pincode"
+                value={pincodeInput}
                 onChange={e => setPincodeInput(e.target.value.replace(/\D/g, "").slice(0, 6))}
-                className="pl-11 rounded-2xl h-12 bg-primary/5 border-2 border-primary/20 font-bold focus-visible:border-primary/50" maxLength={6} />
+                className="pl-9 rounded-lg h-10 text-sm font-medium"
+                maxLength={6}
+              />
             </div>
-            <Button variant="default" size="icon" 
-              className="h-12 w-12 rounded-2xl shrink-0 bg-gradient-to-br from-primary to-blue-600 hover:scale-105 transition-transform shadow-md"
-              onClick={handleGPS} disabled={gpsLoading}>
+            <Button variant="outline" size="icon" className="h-10 w-10 rounded-lg shrink-0" onClick={handleGPS} disabled={gpsLoading}>
               <Locate className={`h-4 w-4 ${gpsLoading ? "animate-spin" : ""}`} />
             </Button>
           </div>
         </div>
         {pincodeLoading && (
-          <div className="flex items-center gap-2 mt-3 text-xs text-primary">
-            <div className="h-3 w-3 rounded-full border-2 border-primary border-t-transparent animate-spin" />
-            <span className="font-medium">Finding suppliers near you...</span>
-          </div>
+          <p className="text-xs text-primary flex items-center gap-1.5">
+            <span className="h-3 w-3 rounded-full border-2 border-primary border-t-transparent animate-spin" />
+            Finding suppliers near you...
+          </p>
         )}
         {pincodeData && (
-          <motion.div initial={{ opacity: 0, y: -5 }} animate={{ opacity: 1, y: 0 }}
-            className="flex items-center gap-2 mt-3 p-3 rounded-2xl bg-gradient-to-r from-primary/10 via-accent/10 to-transparent border border-primary/20">
-            <div className="h-8 w-8 rounded-xl bg-primary/15 flex items-center justify-center shrink-0">
-              <MapPin className="h-4 w-4 text-primary" />
-            </div>
-            <div className="flex-1 min-w-0">
-              <p className="text-sm font-bold truncate">{pincodeData.area}, {pincodeData.city}</p>
-              <p className="text-[11px] text-muted-foreground">{pincodeData.district}, {pincodeData.state}</p>
-            </div>
-            <Badge className="bg-primary/15 text-primary border-0 text-xs font-bold px-2.5">{pincodeData.pincode}</Badge>
-          </motion.div>
+          <div className="flex items-center gap-2 p-2.5 rounded-lg bg-primary/5 border border-primary/10">
+            <MapPin className="h-3.5 w-3.5 text-primary shrink-0" />
+            <span className="text-sm font-medium flex-1">{pincodeData.area}, {pincodeData.city}</span>
+            <Badge variant="secondary" className="text-xs font-medium">{pincodeData.pincode}</Badge>
+          </div>
         )}
-      </motion.div>
+      </div>
 
-      {/* CATEGORY PILLS - richer design */}
-      <motion.div variants={item}>
-        <div className="flex gap-2.5 overflow-x-auto pb-2 -mx-1 px-1 scrollbar-hide">
-          {categories.map(c => {
-            const active = category === c.key;
-            return (
-              <motion.button key={c.key} onClick={() => setCategory(c.key)}
-                whileTap={{ scale: 0.95 }}
-                className={`relative flex items-center gap-2 px-5 py-2.5 rounded-2xl text-sm font-bold whitespace-nowrap transition-all shrink-0 ${
-                  active 
-                    ? `bg-gradient-to-br ${c.gradient} text-white shadow-lg shadow-primary/30` 
-                    : "glass-card text-muted-foreground hover:text-foreground hover:scale-105"
-                }`}>
-                <span className="text-lg">{c.icon}</span>
-                {c.label}
-                {active && (
-                  <motion.div layoutId="cat-dot" className="h-1.5 w-1.5 rounded-full bg-white" />
-                )}
-              </motion.button>
-            );
-          })}
-        </div>
-      </motion.div>
+      <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-hide">
+        {categories.map(c => {
+          const active = category === c.key;
+          return (
+            <button
+              key={c.key}
+              onClick={() => setCategory(c.key)}
+              className={`flex items-center px-4 py-2 rounded-lg text-sm font-medium whitespace-nowrap transition-all shrink-0 ${
+                active
+                  ? "bg-primary text-primary-foreground"
+                  : "bg-card border border-border text-muted-foreground hover:text-foreground hover:border-foreground/20"
+              }`}
+            >
+              {c.label}
+            </button>
+          );
+        })}
+      </div>
 
-      {/* TRUST STRIP */}
-      {!hasPincode && (
-        <motion.div variants={item} className="grid grid-cols-3 gap-2 sm:gap-3">
-          {[
-            { icon: Shield, label: "Verified", desc: "All suppliers", color: "text-emerald-500", bg: "bg-emerald-500/10" },
-            { icon: Zap, label: "30 Min", desc: "Avg delivery", color: "text-amber-500", bg: "bg-amber-500/10" },
-            { icon: Star, label: "4.5+ Rated", desc: "Top quality", color: "text-violet-500", bg: "bg-violet-500/10" },
-          ].map(b => (
-            <div key={b.label} className="glass-card rounded-2xl p-3 flex items-center gap-2.5">
-              <div className={`h-9 w-9 rounded-xl ${b.bg} flex items-center justify-center shrink-0`}>
-                <b.icon className={`h-4 w-4 ${b.color}`} />
-              </div>
-              <div className="min-w-0">
-                <p className="font-heading font-bold text-xs sm:text-sm">{b.label}</p>
-                <p className="text-[10px] text-muted-foreground truncate">{b.desc}</p>
-              </div>
-            </div>
-          ))}
-        </motion.div>
-      )}
-
-      {/* PRODUCTS GRID */}
       {isLoading ? (
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
           {[...Array(8)].map((_, i) => (
-            <div key={i} className="glass-card rounded-3xl overflow-hidden animate-pulse">
-              <div className="h-40 bg-muted/40" />
-              <div className="p-4 space-y-2">
+            <div key={i} className="bg-card border border-border rounded-xl overflow-hidden animate-pulse">
+              <div className="h-36 bg-muted" />
+              <div className="p-3 space-y-2">
                 <div className="h-3 bg-muted rounded w-3/4" />
-                <div className="h-2 bg-muted rounded w-1/2" />
-                <div className="h-6 bg-muted rounded w-1/3 mt-3" />
+                <div className="h-2.5 bg-muted rounded w-1/2" />
+                <div className="h-5 bg-muted rounded w-1/3 mt-3" />
               </div>
             </div>
           ))}
         </div>
       ) : totalResults === 0 ? (
-        <motion.div variants={item} className="text-center py-16 glass-card rounded-3xl">
-          <div className="h-20 w-20 mx-auto mb-4 rounded-2xl bg-gradient-to-br from-primary/10 to-accent/10 flex items-center justify-center">
-            <Droplets className="h-10 w-10 text-primary/40" />
-          </div>
-          <p className="font-heading font-bold text-lg">No products found</p>
+        <div className="text-center py-16 bg-card border border-border rounded-xl">
+          <Droplets className="h-12 w-12 mx-auto text-muted-foreground/30 mb-3" />
+          <p className="font-semibold text-lg">No products found</p>
           <p className="text-sm text-muted-foreground mt-1 max-w-xs mx-auto">
             {search ? "Try a different search term or category" : "No products available in this category yet"}
           </p>
           {(search || category !== "all") && (
-            <Button variant="outline" size="sm" className="mt-4 rounded-xl"
-              onClick={() => { setSearch(""); setCategory("all"); }}>
+            <Button variant="outline" size="sm" className="mt-4 rounded-lg" onClick={() => { setSearch(""); setCategory("all"); }}>
               Clear filters
             </Button>
           )}
-        </motion.div>
+        </div>
       ) : (
         <div className="space-y-8">
-          {/* NEARBY SECTION */}
           {nearbyProducts.length > 0 && (
-            <motion.div variants={item}>
+            <div>
               {hasPincode && otherProducts.length > 0 && (
-                <div className="flex items-center gap-3 mb-4">
-                  <div className="h-9 w-9 rounded-xl bg-gradient-to-br from-success to-emerald-600 flex items-center justify-center shadow-md">
-                    <MapPin className="h-4 w-4 text-white" />
-                  </div>
-                  <div>
-                    <h3 className="font-heading font-bold text-base sm:text-lg">Near You</h3>
-                    <p className="text-[11px] text-muted-foreground">
-                      {nearbyProducts.length} product{nearbyProducts.length !== 1 ? "s" : ""} in {pincodeData.district}
-                    </p>
-                  </div>
-                  <Badge className="ml-auto bg-success/10 text-success border-success/20 font-bold">Fast delivery</Badge>
+                <div className="flex items-center gap-2 mb-4">
+                  <MapPin className="h-4 w-4 text-primary" />
+                  <h3 className="font-semibold">Near You</h3>
+                  <Badge variant="secondary" className="bg-primary/10 text-primary border-primary/20 text-[10px]">Within 5KM</Badge>
+                  <span className="text-xs text-muted-foreground ml-1">
+                    {nearbyProducts.length} product{nearbyProducts.length !== 1 ? "s" : ""}
+                  </span>
                 </div>
               )}
-              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-4">
+              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
                 {nearbyProducts.map(renderProduct)}
               </div>
-            </motion.div>
+            </div>
           )}
 
-          {/* Other products */}
           {otherProducts.length > 0 && (
-            <motion.div variants={item}>
-              <div className="flex items-center gap-3 mb-4">
-                <div className="h-9 w-9 rounded-xl bg-muted flex items-center justify-center">
-                  <Truck className="h-4 w-4 text-muted-foreground" />
-                </div>
-                <div>
-                  <h3 className="font-heading font-bold text-base sm:text-lg text-muted-foreground">Other Areas</h3>
-                  <p className="text-[11px] text-muted-foreground">{otherProducts.length} product{otherProducts.length !== 1 ? "s" : ""} · longer delivery time</p>
-                </div>
+            <div>
+              <div className="flex items-center gap-2 mb-4">
+                <h3 className="font-semibold text-muted-foreground">Other Areas</h3>
+                <span className="text-xs text-muted-foreground">
+                  {otherProducts.length} product{otherProducts.length !== 1 ? "s" : ""}
+                </span>
               </div>
-              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-4 opacity-80">
+              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 opacity-75">
                 {otherProducts.map(renderProduct)}
               </div>
-            </motion.div>
+            </div>
           )}
         </div>
       )}
-    </motion.div>
+    </div>
   );
 }

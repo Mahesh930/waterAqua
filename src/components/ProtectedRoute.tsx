@@ -22,6 +22,10 @@ export default function ProtectedRoute({ children, allowedRoles }: Props) {
 
   if (!user) return <Navigate to="/login" replace />;
 
+  if (allowedRoles && !role) {
+    return <Navigate to="/login" replace />;
+  }
+
   if (allowedRoles && role && !allowedRoles.includes(role)) {
     // Redirect to their correct dashboard
     if (role === "customer") return <Navigate to="/customer" replace />;

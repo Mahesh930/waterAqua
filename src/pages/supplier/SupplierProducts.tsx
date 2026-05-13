@@ -12,6 +12,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { motion, AnimatePresence } from "framer-motion";
+import { getProductImageUrl } from "@/lib/product-images";
 
 const container = { hidden: {}, show: { transition: { staggerChildren: 0.06 } } };
 const item = { hidden: { opacity: 0, y: 20 }, show: { opacity: 1, y: 0 } };
@@ -20,7 +21,7 @@ const categoryOptions = [
   { value: "bottle", label: "🍶 Bottle", sizes: [1, 2, 5, 10] },
   { value: "can", label: "🪣 Can", sizes: [20, 25] },
   { value: "jar", label: "🫙 Jar", sizes: [15, 18] },
-  { value: "tanker", label: "🚛 Tanker", sizes: [1000, 2000, 5000, 10000] },
+  { value: "tanker", label: "🚛 Tanker", sizes: [5000, 10000] },
 ];
 
 const emptyProduct = {
@@ -304,8 +305,8 @@ export default function SupplierProducts() {
               className="glass-card rounded-2xl overflow-hidden group">
               {/* Image */}
               <div className="relative h-32 bg-gradient-to-br from-primary/5 via-accent/5 to-transparent flex items-center justify-center">
-                {p.image_url ? (
-                  <img src={p.image_url} alt={p.name} className="h-full w-full object-cover" />
+                {getProductImageUrl(p) ? (
+                  <img src={getProductImageUrl(p)} alt={p.name} className="h-full w-full object-contain p-2" />
                 ) : (
                   <span className="text-5xl">{catIcon(p.category)}</span>
                 )}

@@ -1,0 +1,43 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 520 360" role="img" aria-labelledby="title desc">
+  <title id="title">5000 to 10000 liter water tanker</title>
+  <desc id="desc">Orange water tanker truck for bulk water delivery.</desc>
+  <defs>
+    <linearGradient id="tank" x1="66" x2="350" y1="104" y2="226" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#ff9c2e"/>
+      <stop offset=".55" stop-color="#f47a1c"/>
+      <stop offset="1" stop-color="#db5f16"/>
+    </linearGradient>
+    <linearGradient id="cab" x1="340" x2="465" y1="92" y2="245" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#ff9b31"/>
+      <stop offset="1" stop-color="#d75d16"/>
+    </linearGradient>
+    <filter id="shadow" x="-20%" y="-20%" width="140%" height="160%">
+      <feDropShadow dx="0" dy="12" stdDeviation="13" flood-color="#000" flood-opacity=".18"/>
+    </filter>
+  </defs>
+  <rect width="520" height="360" rx="28" fill="#f8fbff"/>
+  <g filter="url(#shadow)">
+    <path fill="#263341" d="M71 237h361c20 0 37 16 37 37H50c0-20 16-37 37-37Z"/>
+    <path fill="url(#tank)" d="M63 122c0-31 25-56 56-56h193c31 0 56 25 56 56v53c0 31-25 56-56 56H119c-31 0-56-25-56-56v-53Z"/>
+    <path fill="#fff6e8" d="M83 102h265v46H83z"/>
+    <path fill="#65b7dc" d="M115 112h173v16H115z" opacity=".95"/>
+    <text x="122" y="126" fill="#2b8fc4" font-family="Arial, sans-serif" font-size="15" font-weight="700">WATER TANKER</text>
+    <path fill="#c34f13" d="M64 170h302v20H64z" opacity=".35"/>
+    <path fill="#a83f10" d="M89 228h246v23H89z"/>
+    <path fill="url(#cab)" d="M339 91h84c29 0 52 23 52 52v92H339V91Z"/>
+    <path fill="#263341" d="M401 112h58c4 0 8 4 8 8v50h-66v-58Z"/>
+    <path fill="#c7eefc" d="M409 119h48c3 0 5 2 5 5v35h-53v-40Z"/>
+    <path fill="#263341" d="M343 177h132v58H343z"/>
+    <path fill="#f47a1c" d="M351 184h70v43h-70z"/>
+    <path fill="#ffd865" d="M65 248h288v11H65z"/>
+    <path fill="#272f38" d="M79 247h28l-12 12H67zm55 0h28l-12 12h-28zm55 0h28l-12 12h-28zm55 0h28l-12 12h-28zm55 0h28l-12 12h-28z"/>
+    <circle cx="126" cy="274" r="38" fill="#1f2933"/>
+    <circle cx="126" cy="274" r="21" fill="#e8eef5"/>
+    <circle cx="126" cy="274" r="10" fill="#758393"/>
+    <circle cx="397" cy="274" r="38" fill="#1f2933"/>
+    <circle cx="397" cy="274" r="21" fill="#e8eef5"/>
+    <circle cx="397" cy="274" r="10" fill="#758393"/>
+    <path fill="#fff" d="M92 82c41-14 178-14 226 1 12 4 10 21-3 23-69 11-153 11-220 0-13-2-16-20-3-24Z" opacity=".2"/>
+    <path fill="#f7c156" d="M347 203h71v8h-71z"/>
+  </g>
+</svg>

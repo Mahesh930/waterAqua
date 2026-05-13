@@ -19,11 +19,11 @@ const statusColors: Record<string, string> = {
 };
 
 const statusLabels: Record<string, string> = {
-  placed: "⏳ Pending",
-  confirmed: "✅ Confirmed",
-  out_for_delivery: "🚛 Dispatched",
-  delivered: "📦 Delivered",
-  cancelled: "❌ Cancelled",
+  placed: "Pending",
+  confirmed: "Confirmed",
+  out_for_delivery: "Dispatched",
+  delivered: "Delivered",
+  cancelled: "Cancelled",
 };
 
 export default function SupplierHome() {
@@ -110,7 +110,7 @@ export default function SupplierHome() {
             </span>
           </div>
           <h2 className="font-heading text-2xl sm:text-3xl font-bold mt-3">
-            Welcome back{profile?.full_name ? `, ${profile.full_name.split(" ")[0]}` : ""}! 🚛
+            Welcome back{profile?.full_name ? `, ${profile.full_name.split(" ")[0]}` : ""}!
           </h2>
           <p className="text-sm sm:text-base text-white/80 mt-1 max-w-md">
             {supplier?.business_name ? `Managing ${supplier.business_name}` : "Manage your water delivery business"}
@@ -182,8 +182,8 @@ export default function SupplierHome() {
                 className="glass-card rounded-2xl overflow-hidden hover:shadow-lg transition-shadow">
                 <div className="flex items-center p-4">
                   <div className="flex items-center gap-3 flex-1">
-                    <div className="h-12 w-12 rounded-xl bg-gradient-to-br from-primary/15 to-accent/15 flex items-center justify-center text-xl shrink-0">
-                      📦
+                    <div className="h-12 w-12 rounded-xl bg-gradient-to-br from-primary/15 to-accent/15 flex items-center justify-center shrink-0">
+                      <Package className="h-6 w-6 text-primary" />
                     </div>
                     <div className="min-w-0">
                       <p className="font-heading font-semibold text-sm">Order #{order.id.slice(0, 8)}</p>
@@ -229,7 +229,7 @@ export default function SupplierHome() {
             {[
               { icon: Shield, label: "Verified Business", desc: supplier.business_name },
               { icon: Zap, label: "Delivery Time", desc: supplier.delivery_time },
-              { icon: Star, label: "Rating", desc: `${Number(supplier.rating).toFixed(1)} ⭐` },
+              { icon: Star, label: "Rating", desc: `${Number(supplier.rating).toFixed(1)} Rating` },
             ].map(badge => (
               <div key={badge.label} className="flex flex-col items-center gap-1.5">
                 <div className="h-10 w-10 rounded-xl bg-primary/10 flex items-center justify-center">

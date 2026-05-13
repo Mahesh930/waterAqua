@@ -19,8 +19,8 @@ const statusColors: Record<string, string> = {
 const statusLabels: Record<string, string> = {
   placed: "Order Placed",
   confirmed: "Confirmed",
-  out_for_delivery: "On the Way 🚛",
-  delivered: "Delivered ✅",
+  out_for_delivery: "On the Way",
+  delivered: "Delivered",
   cancelled: "Cancelled",
 };
 
@@ -28,10 +28,10 @@ const container = { hidden: {}, show: { transition: { staggerChildren: 0.08 } } 
 const item = { hidden: { opacity: 0, y: 20 }, show: { opacity: 1, y: 0, transition: { duration: 0.4 } } };
 
 const productCategories = [
-  { icon: "🍶", label: "Water Bottles", desc: "5L & 10L", color: "from-blue-500/20 to-blue-400/5", path: "/customer/products?cat=bottle" },
-  { icon: "🪣", label: "Water Cans", desc: "20L Standard", color: "from-emerald-500/20 to-emerald-400/5", path: "/customer/products?cat=can" },
-  { icon: "🫙", label: "Water Jars", desc: "15L Premium", color: "from-violet-500/20 to-violet-400/5", path: "/customer/products?cat=jar" },
-  { icon: "🚛", label: "Tanker Delivery", desc: "5000L+ Bulk", color: "from-amber-500/20 to-amber-400/5", path: "/customer/products?cat=tanker" },
+  { image: "/product-images/bottle-1l.png", label: "Water Bottles", desc: "5L & 10L", color: "from-blue-500/20 to-blue-400/5", path: "/customer/products?cat=bottle" },
+  { image: "/product-images/can-20l.png", label: "Water Cans", desc: "20L Standard", color: "from-emerald-500/20 to-emerald-400/5", path: "/customer/products?cat=can" },
+  { image: "/product-images/jar-15l.png", label: "Water Jars", desc: "15L Premium", color: "from-violet-500/20 to-violet-400/5", path: "/customer/products?cat=jar" },
+  { image: "/product-images/tanker-5k-10k.png", label: "Tanker Delivery", desc: "5000L+ Bulk", color: "from-amber-500/20 to-amber-400/5", path: "/customer/products?cat=tanker" },
 ];
 
 export default function CustomerHome() {
@@ -93,7 +93,7 @@ export default function CustomerHome() {
             </span>
           </div>
           <h2 className="font-heading text-2xl sm:text-3xl font-bold mt-3">
-            Hello{profile?.full_name ? `, ${profile.full_name.split(" ")[0]}` : ""}! 💧
+            Hello{profile?.full_name ? `, ${profile.full_name.split(" ")[0]}` : ""}!
           </h2>
           <p className="text-sm sm:text-base text-white/80 mt-1 max-w-md">
             Get fresh water products delivered to your doorstep. Bottles, cans, jars & tankers.
@@ -129,7 +129,9 @@ export default function CustomerHome() {
               <motion.div
                 whileHover={{ scale: 1.02, y: -2 }} whileTap={{ scale: 0.98 }}
                 className={`glass-card rounded-2xl p-4 cursor-pointer group hover:shadow-xl transition-all bg-gradient-to-br ${cat.color}`}>
-                <span className="text-3xl">{cat.icon}</span>
+                <div className="h-10 w-10 mb-2">
+                  <img src={cat.image} alt={cat.label} className="h-full w-full object-contain" />
+                </div>
                 <p className="font-heading font-semibold text-sm mt-2">{cat.label}</p>
                 <p className="text-[11px] text-muted-foreground">{cat.desc}</p>
               </motion.div>
@@ -194,8 +196,8 @@ export default function CustomerHome() {
                 className="glass-card rounded-2xl overflow-hidden hover:shadow-lg transition-shadow">
                 <div className="flex items-center p-4">
                   <div className="flex items-center gap-3 flex-1">
-                    <div className="h-12 w-12 rounded-xl bg-gradient-to-br from-primary/15 to-accent/15 flex items-center justify-center text-xl shrink-0">
-                      🚛
+                    <div className="h-12 w-12 rounded-xl bg-gradient-to-br from-primary/15 to-accent/15 flex items-center justify-center shrink-0">
+                      <Truck className="h-6 w-6 text-primary" />
                     </div>
                     <div className="min-w-0">
                       <p className="font-heading font-semibold text-sm truncate">{(order as any).suppliers?.business_name ?? "Supplier"}</p>

@@ -2,8 +2,9 @@ import { useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery } from "@tanstack/react-query";
 import { motion } from "framer-motion";
-import { Package, MapPin, Clock, IndianRupee, Search } from "lucide-react";
+import { Package, MapPin, Clock, IndianRupee, Search, ChevronLeft, ChevronRight } from "lucide-react";
 import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
 
 const container = { hidden: {}, show: { transition: { staggerChildren: 0.04 } } };
 const item = { hidden: { opacity: 0, y: 15 }, show: { opacity: 1, y: 0 } };
@@ -27,6 +28,8 @@ const statusLabels: Record<string, string> = {
 export default function AdminOrders() {
   const [filter, setFilter] = useState("all");
   const [search, setSearch] = useState("");
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 10;
 
   const { data: orders = [], isLoading } = useQuery({
     queryKey: ["admin-all-orders"],
@@ -55,6 +58,17 @@ export default function AdminOrders() {
 
   const totalValue = filtered.reduce((s, o) => s + Number(o.total_amount), 0);
 
+  // Pagination
+  const totalPages = Math.ceil(filtered.length / itemsPerPage);
+  const startIdx = (currentPage - 1) * itemsPerPage;
+  const endIdx = startIdx + itemsPerPage;
+  const paginatedOrders = filtered.slice(startIdx, endIdx);
+
+  // Reset to page 1 when filter/search changes
+  if (currentPage > totalPages && totalPages > 0) {
+    setCurrentPage(1);
+  }
+
   return (
     <motion.div variants={container} initial="hidden" animate="show" className="space-y-6">
       <motion.div variants={item} className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-3">
@@ -75,9 +89,8 @@ export default function AdminOrders() {
       <motion.div variants={item} className="flex gap-1.5 overflow-x-auto pb-1">
         {filterTabs.map(t => (
           <button key={t.key} onClick={() => setFilter(t.key)}
-            className={`flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-semibold whitespace-nowrap transition-all ${
-              filter === t.key ? "bg-primary text-primary-foreground shadow-md shadow-primary/20" : "glass text-muted-foreground hover:text-foreground"
-            }`}>
+            className={`flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-semibold whitespace-nowrap transition-all ${filter === t.key ? "bg-primary text-primary-foreground shadow-md shadow-primary/20" : "glass text-muted-foreground hover:text-foreground"
+              }`}>
             {t.label}
             <span className={`px-1.5 py-0.5 rounded-md text-[10px] ${filter === t.key ? "bg-white/20" : "bg-muted"}`}>{t.count}</span>
           </button>
@@ -98,39 +111,61 @@ export default function AdminOrders() {
           <p className="font-heading font-semibold text-lg">No orders found</p>
         </div>
       ) : (
-        <div className="space-y-2">
-          <p className="text-xs text-muted-foreground font-medium">{filtered.length} order{filtered.length !== 1 ? "s" : ""}</p>
-          {filtered.map(order => (
-            <motion.div key={order.id} variants={item}
-              className="glass-card rounded-2xl p-4 hover:shadow-lg transition-shadow">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <div className="h-11 w-11 rounded-xl bg-gradient-to-br from-primary/15 to-accent/15 flex items-center justify-center text-lg shrink-0">📦</div>
-                  <div>
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <span className="font-heading font-semibold text-sm">#{order.id.slice(0, 8)}</span>
-                      <span className={`px-2.5 py-0.5 rounded-lg text-[10px] font-semibold border ${statusColors[order.status]}`}>
-                        {statusLabels[order.status]}
-                      </span>
-                    </div>
-                    <div className="flex items-center gap-3 text-xs text-muted-foreground mt-0.5">
-                      <span>{(order as any).suppliers?.business_name ?? "Unknown"}</span>
-                      <span>·</span>
-                      <span>{order.quantity} units</span>
-                      <span>·</span>
-                      <span className="flex items-center gap-0.5"><Clock className="h-3 w-3" />{new Date(order.created_at).toLocaleDateString("en-IN", { day: "numeric", month: "short" })}</span>
-                    </div>
-                    {order.delivery_address && (
-                      <p className="text-[10px] text-muted-foreground/70 mt-0.5 flex items-center gap-0.5">
-                        <MapPin className="h-3 w-3 shrink-0" />{order.delivery_address.slice(0, 40)}{order.delivery_address.length > 40 ? "…" : ""}
-                      </p>
-                    )}
-                  </div>
-                </div>
-                <span className="font-heading font-bold text-primary text-lg">₹{Number(order.total_amount)}</span>
+        <div className="space-y-4">
+          <div className="flex items-center justify-between">
+            <p className="text-xs text-muted-foreground font-medium">
+              Showing {startIdx + 1}-{Math.min(endIdx, filtered.length)} of {filtered.length} order{filtered.length !== 1 ? "s" : ""}
+            </p>
+            <div className="flex items-center gap-1.5">
+              <Button variant="outline" size="sm" className="h-8 px-2"
+                onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
+                disabled={currentPage === 1}>
+                <ChevronLeft className="h-4 w-4" />
+              </Button>
+              <div className="text-xs font-medium px-2">
+                Page {currentPage} of {Math.max(1, totalPages)}
               </div>
-            </motion.div>
-          ))}
+              <Button variant="outline" size="sm" className="h-8 px-2"
+                onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 1))}
+                disabled={currentPage >= totalPages}>
+                <ChevronRight className="h-4 w-4" />
+              </Button>
+            </div>
+          </div>
+
+          <div className="space-y-2">
+            {paginatedOrders.map(order => (
+              <motion.div key={order.id} variants={item}
+                className="glass-card rounded-2xl p-4 hover:shadow-lg transition-shadow">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="h-11 w-11 rounded-xl bg-gradient-to-br from-primary/15 to-accent/15 flex items-center justify-center text-lg shrink-0">📦</div>
+                    <div>
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className="font-heading font-semibold text-sm">#{order.id.slice(0, 8)}</span>
+                        <span className={`px-2.5 py-0.5 rounded-lg text-[10px] font-semibold border ${statusColors[order.status]}`}>
+                          {statusLabels[order.status]}
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-3 text-xs text-muted-foreground mt-0.5">
+                        <span>{(order as any).suppliers?.business_name ?? "Unknown"}</span>
+                        <span>·</span>
+                        <span>{order.quantity} units</span>
+                        <span>·</span>
+                        <span className="flex items-center gap-0.5"><Clock className="h-3 w-3" />{new Date(order.created_at).toLocaleDateString("en-IN", { day: "numeric", month: "short" })}</span>
+                      </div>
+                      {order.delivery_address && (
+                        <p className="text-[10px] text-muted-foreground/70 mt-0.5 flex items-center gap-0.5">
+                          <MapPin className="h-3 w-3 shrink-0" />{order.delivery_address.slice(0, 40)}{order.delivery_address.length > 40 ? "…" : ""}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                  <span className="font-heading font-bold text-primary text-lg">₹{Number(order.total_amount)}</span>
+                </div>
+              </motion.div>
+            ))}
+          </div>
         </div>
       )}
     </motion.div>

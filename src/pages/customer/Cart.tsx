@@ -164,7 +164,7 @@ export default function Cart() {
                         className="flex items-center gap-3 p-4 hover:bg-muted/20 transition-colors">
                         <div className="h-14 w-14 rounded-xl bg-gradient-to-br from-primary/10 to-accent/10 flex items-center justify-center text-2xl shrink-0">
                           {ci.product?.image_url ? (
-                            <img src={ci.product.image_url} alt={ci.product.name} className="h-full w-full object-cover rounded-xl" />
+                            <img src={ci.product.image_url} alt={ci.product.name} className="h-full w-full object-contain rounded-xl p-1" />
                           ) : (categoryIcons[ci.product?.category || "can"] || "🪣")}
                         </div>
                         <div className="flex-1 min-w-0">

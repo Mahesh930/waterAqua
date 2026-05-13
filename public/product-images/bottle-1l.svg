@@ -1,0 +1,32 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 360 360" role="img" aria-labelledby="title desc">
+  <title id="title">1 liter water bottle</title>
+  <desc id="desc">Clear plastic 1 liter water bottle.</desc>
+  <defs>
+    <linearGradient id="bottle" x1="137" x2="224" y1="35" y2="324" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#f8fdff"/>
+      <stop offset=".44" stop-color="#ddecf7"/>
+      <stop offset="1" stop-color="#a9d2ee"/>
+    </linearGradient>
+    <linearGradient id="water" x1="125" x2="233" y1="150" y2="316" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#fff" stop-opacity=".55"/>
+      <stop offset="1" stop-color="#8fd3f4" stop-opacity=".62"/>
+    </linearGradient>
+    <filter id="shadow" x="-30%" y="-20%" width="160%" height="160%">
+      <feDropShadow dx="0" dy="12" stdDeviation="12" flood-color="#000" flood-opacity=".13"/>
+    </filter>
+  </defs>
+  <rect width="360" height="360" rx="28" fill="#f8fbff"/>
+  <g filter="url(#shadow)">
+    <path fill="#dfeaf4" d="M156 36h49v34h-49z"/>
+    <rect x="151" y="27" width="59" height="22" rx="7" fill="#e9f0f7"/>
+    <rect x="153" y="31" width="55" height="7" rx="3.5" fill="#cfdce9"/>
+    <path fill="url(#bottle)" stroke="#b4cce0" stroke-width="4" d="M151 68h59c0 24 13 31 23 48 7 11 11 24 11 38v137c0 23-18 41-41 41h-45c-23 0-41-18-41-41V154c0-14 4-27 11-38 10-17 23-24 23-48Z"/>
+    <path fill="url(#water)" d="M126 159h108v126c0 20-16 36-36 36h-36c-20 0-36-16-36-36V159Z"/>
+    <path fill="#fff" d="M139 119c13-23 68-24 82 0 3 5 0 12-6 12h-70c-6 0-9-7-6-12Z" opacity=".64"/>
+    <rect x="124" y="153" width="112" height="47" rx="7" fill="#f8fbff" opacity=".62"/>
+    <path fill="none" stroke="#c7dceb" stroke-width="9" d="M126 220h108M126 246h108M126 272h108M130 298h100" opacity=".82"/>
+    <path fill="none" stroke="#8fbad3" stroke-width="3" d="M126 200h108M126 246h108M126 272h108" opacity=".48"/>
+    <path fill="#fff" d="M144 79c13 5 51 5 73 0v16c-22 8-60 8-73 0V79Z" opacity=".45"/>
+    <path fill="#fff" d="M151 154c17-6 45-6 58 0 4 2 4 8 0 10-15 7-43 7-58 0-5-2-5-8 0-10Z" opacity=".6"/>
+  </g>
+</svg>

@@ -2,35 +2,21 @@ import { useState, useEffect } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { Package, Droplets, Star, Send, XCircle, Printer, Clock, ChevronDown, ChevronUp, MapPin, Filter } from "lucide-react";
-import { motion, AnimatePresence } from "framer-motion";
+import { Package, Droplets, Star, Send, Printer, ChevronDown, ChevronUp, MapPin, XCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
-import {
-  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
-  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger,
-} from "@/components/ui/alert-dialog";
+import { Link } from "react-router-dom";
 
 const statusColors: Record<string, string> = {
-  placed: "bg-warning/10 text-warning border-warning/20",
-  confirmed: "bg-primary/10 text-primary border-primary/20",
-  out_for_delivery: "bg-accent/10 text-accent border-accent/20",
-  delivered: "bg-emerald-500/10 text-emerald-600 border-emerald-500/20",
-  cancelled: "bg-destructive/10 text-destructive border-destructive/20",
+  delivered: "bg-emerald-50 text-emerald-600 dark:bg-emerald-900/20 dark:text-emerald-400",
+  cancelled: "bg-red-50 text-red-600 dark:bg-red-900/20 dark:text-red-400",
 };
 
 const statusLabels: Record<string, string> = {
-  placed: "Placed",
-  confirmed: "Confirmed",
-  out_for_delivery: "On the Way",
   delivered: "Delivered",
   cancelled: "Cancelled",
-};
-
-const statusEmoji: Record<string, string> = {
-  placed: "📦", confirmed: "✅", out_for_delivery: "🚛", delivered: "💧", cancelled: "❌",
 };
 
 function RatingWidget({ orderId, supplierId, customerId, onDone }: {
@@ -52,30 +38,29 @@ function RatingWidget({ orderId, supplierId, customerId, onDone }: {
     if (error) {
       toast({ title: "Failed to submit", description: error.message, variant: "destructive" });
     } else {
-      toast({ title: "Thank you! ⭐", description: "Your feedback has been submitted." });
+      toast({ title: "Thank you!", description: "Your feedback has been submitted." });
       onDone();
     }
     setLoading(false);
   };
 
   return (
-    <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }}
-      className="mt-3 p-4 rounded-xl bg-gradient-to-br from-warning/5 to-transparent border border-warning/10 space-y-3">
-      <p className="text-sm font-heading font-semibold">Rate your delivery ⭐</p>
+    <div className="mt-3 p-4 rounded-lg bg-amber-50/50 dark:bg-amber-900/10 border border-amber-100 dark:border-amber-900/20 space-y-3">
+      <p className="text-sm font-medium">Rate your delivery</p>
       <div className="flex gap-1.5">
         {[1, 2, 3, 4, 5].map(star => (
           <button key={star} type="button" onMouseEnter={() => setHover(star)} onMouseLeave={() => setHover(0)} onClick={() => setRating(star)}
-            className="transition-transform hover:scale-125">
-            <Star className={`h-7 w-7 transition-colors ${star <= (hover || rating) ? "fill-warning text-warning" : "text-muted-foreground/20"}`} />
+            className="transition-transform hover:scale-110">
+            <Star className={`h-6 w-6 transition-colors ${star <= (hover || rating) ? "fill-amber-400 text-amber-400" : "text-muted-foreground/20"}`} />
           </button>
         ))}
       </div>
-      <Textarea placeholder="How was the delivery experience? (optional)" value={comment}
-        onChange={e => setComment(e.target.value)} className="rounded-xl resize-none bg-card/50 border-border/50" rows={2} />
-      <Button size="sm" className="gap-2 rounded-xl shadow-md" onClick={submit} disabled={loading}>
+      <Textarea placeholder="How was the delivery? (optional)" value={comment}
+        onChange={e => setComment(e.target.value)} className="rounded-lg resize-none text-sm" rows={2} />
+      <Button size="sm" className="gap-1.5 rounded-lg" onClick={submit} disabled={loading}>
         <Send className="h-3.5 w-3.5" /> {loading ? "Submitting..." : "Submit Review"}
       </Button>
-    </motion.div>
+    </div>
   );
 }
 
@@ -91,7 +76,7 @@ function ReceiptModal({ order, onClose }: { order: any; onClose: () => void }) {
       .total{font-size:18px;font-weight:bold;border-top:2px solid #333;margin-top:8px;padding-top:12px}
       .footer{text-align:center;color:#888;font-size:12px;margin-top:24px}
       </style></head><body>
-      <h1>🚰 AquaHome Receipt</h1>
+      <h1>AquaHome Receipt</h1>
       <p style="text-align:center;color:#666">Order #${order.id.slice(0, 8)}</p>
       <div class="line"><span>Supplier</span><span>${order.suppliers?.business_name ?? "N/A"}</span></div>
       <div class="line"><span>Quantity</span><span>${order.quantity} cans</span></div>
@@ -107,37 +92,31 @@ function ReceiptModal({ order, onClose }: { order: any; onClose: () => void }) {
   };
 
   return (
-    <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4" onClick={onClose}>
-      <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }}
-        className="bg-card rounded-2xl p-6 max-w-sm w-full space-y-4 shadow-2xl border border-border" onClick={e => e.stopPropagation()}>
+    <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4" onClick={onClose}>
+      <div className="bg-card rounded-xl p-6 max-w-sm w-full space-y-4 shadow-xl border border-border" onClick={e => e.stopPropagation()}>
         <div className="text-center">
-          <div className="h-12 w-12 mx-auto mb-2 rounded-xl bg-primary/10 flex items-center justify-center">
-            <Printer className="h-6 w-6 text-primary" />
-          </div>
-          <h3 className="font-heading font-bold text-lg">Payment Receipt</h3>
+          <Printer className="h-8 w-8 mx-auto text-primary mb-2" />
+          <h3 className="font-semibold text-lg">Payment Receipt</h3>
         </div>
-        <div className="space-y-2.5 text-sm bg-muted/30 rounded-xl p-4">
+        <div className="space-y-2 text-sm bg-muted/50 rounded-lg p-4">
           <div className="flex justify-between"><span className="text-muted-foreground">Order</span><span className="font-mono text-xs">#{order.id.slice(0, 8)}</span></div>
           <div className="flex justify-between"><span className="text-muted-foreground">Supplier</span><span className="font-medium">{order.suppliers?.business_name ?? "N/A"}</span></div>
           <div className="flex justify-between"><span className="text-muted-foreground">Quantity</span><span>{order.quantity} units</span></div>
           <div className="flex justify-between"><span className="text-muted-foreground">Date</span><span>{new Date(order.created_at).toLocaleDateString("en-IN")}</span></div>
-          <div className="flex justify-between border-t border-border pt-2 font-bold text-base">
+          <div className="flex justify-between border-t border-border pt-2 font-semibold text-base">
             <span>Total</span><span className="text-primary">₹{Number(order.total_amount)}</span>
           </div>
         </div>
         <div className="flex gap-2">
-          <Button className="flex-1 gap-2 rounded-xl shadow-md" onClick={printReceipt}>
+          <Button className="flex-1 gap-2 rounded-lg" onClick={printReceipt}>
             <Printer className="h-4 w-4" /> Print / Download
           </Button>
-          <Button variant="outline" className="rounded-xl" onClick={onClose}>Close</Button>
+          <Button variant="outline" className="rounded-lg" onClick={onClose}>Close</Button>
         </div>
-      </motion.div>
+      </div>
     </div>
   );
 }
-
-const container = { hidden: {}, show: { transition: { staggerChildren: 0.05 } } };
-const item = { hidden: { opacity: 0, y: 15 }, show: { opacity: 1, y: 0 } };
 
 export default function OrderHistory() {
   const { user } = useAuth();
@@ -147,13 +126,15 @@ export default function OrderHistory() {
   const [filter, setFilter] = useState("all");
   const [expandedId, setExpandedId] = useState<string | null>(null);
 
+  // Only fetch delivered and cancelled orders for history
   const { data: orders = [], isLoading } = useQuery({
-    queryKey: ["customer-orders", user?.id],
+    queryKey: ["customer-orders-history", user?.id],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("orders")
         .select("*, suppliers(business_name, area)")
         .eq("customer_id", user!.id)
+        .in("status", ["delivered", "cancelled"])
         .order("created_at", { ascending: false });
       if (error) throw error;
       return data;
@@ -164,9 +145,12 @@ export default function OrderHistory() {
   useEffect(() => {
     if (!user) return;
     const channel = supabase
-      .channel("customer-orders-realtime")
-      .on("postgres_changes", { event: "UPDATE", schema: "public", table: "orders", filter: `customer_id=eq.${user.id}` },
-        () => { queryClient.invalidateQueries({ queryKey: ["customer-orders"] }); }
+      .channel("customer-orders-history-realtime")
+      .on("postgres_changes", { event: "*", schema: "public", table: "orders", filter: `customer_id=eq.${user.id}` },
+        () => { 
+          queryClient.invalidateQueries({ queryKey: ["customer-orders-history"] });
+          queryClient.invalidateQueries({ queryKey: ["customer-orders"] });
+        }
       ).subscribe();
     return () => { supabase.removeChannel(channel); };
   }, [user, queryClient]);
@@ -183,86 +167,82 @@ export default function OrderHistory() {
 
   const feedbackByOrder = new Map(feedbacks.map(f => [f.order_id, f]));
 
-  const cancelOrder = async (orderId: string) => {
-    const { error } = await supabase.from("orders").update({ status: "cancelled" as any }).eq("id", orderId).eq("customer_id", user!.id);
-    if (error) { toast({ title: "Cancel failed", description: error.message, variant: "destructive" }); }
-    else { toast({ title: "Order Cancelled" }); queryClient.invalidateQueries({ queryKey: ["customer-orders"] }); }
-  };
-
   const filtered = filter === "all" ? orders : orders.filter(o => o.status === filter);
   const totalSpent = orders.filter(o => o.status === "delivered").reduce((sum, o) => sum + Number(o.total_amount), 0);
+  const deliveredCount = orders.filter(o => o.status === "delivered").length;
+  const cancelledCount = orders.filter(o => o.status === "cancelled").length;
 
   return (
-    <motion.div variants={container} initial="hidden" animate="show" className="space-y-6">
+    <div className="space-y-6 py-2">
       {/* Header */}
-      <motion.div variants={item} className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-3">
-        <div>
-          <h2 className="font-heading text-2xl sm:text-3xl font-bold">Order History</h2>
-          <p className="text-muted-foreground text-sm mt-0.5">
-            {orders.length} order{orders.length !== 1 ? "s" : ""} · ₹{totalSpent} total spent
-          </p>
-        </div>
-      </motion.div>
+      <div>
+        <h1 className="text-2xl font-semibold">Order History</h1>
+        <p className="text-muted-foreground text-sm mt-1">
+          {orders.length} order{orders.length !== 1 ? "s" : ""} · ₹{totalSpent} total spent
+        </p>
+      </div>
 
       {/* Filter pills */}
-      <motion.div variants={item} className="flex flex-wrap gap-2">
+      <div className="flex flex-wrap gap-2">
         {[
           { key: "all", label: "All", count: orders.length },
-          { key: "placed", label: "📦 Placed", count: orders.filter(o => o.status === "placed").length },
-          { key: "confirmed", label: "✅ Confirmed", count: orders.filter(o => o.status === "confirmed").length },
-          { key: "out_for_delivery", label: "🚛 Delivering", count: orders.filter(o => o.status === "out_for_delivery").length },
-          { key: "delivered", label: "💧 Delivered", count: orders.filter(o => o.status === "delivered").length },
-          { key: "cancelled", label: "❌ Cancelled", count: orders.filter(o => o.status === "cancelled").length },
+          { key: "delivered", label: "Delivered", count: deliveredCount },
+          { key: "cancelled", label: "Cancelled", count: cancelledCount },
         ].filter(f => f.count > 0 || f.key === "all").map(f => (
           <button key={f.key} onClick={() => setFilter(f.key)}
-            className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition-all flex items-center gap-1.5 ${
-              filter === f.key ? "bg-primary text-primary-foreground shadow-md shadow-primary/20" : "glass text-muted-foreground hover:text-foreground"
+            className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all flex items-center gap-1.5 ${
+              filter === f.key ? "bg-primary text-primary-foreground" : "bg-card border border-border text-muted-foreground hover:text-foreground"
             }`}>
             {f.label}
-            <span className={`text-[10px] px-1.5 py-0.5 rounded-md ${
+            <span className={`text-[10px] px-1.5 py-0.5 rounded ${
               filter === f.key ? "bg-white/20" : "bg-muted"
             }`}>{f.count}</span>
           </button>
         ))}
-      </motion.div>
+      </div>
 
       {/* Orders */}
       {isLoading ? (
-        <div className="flex flex-col items-center justify-center py-20 gap-3">
-          <div className="animate-spin h-10 w-10 border-4 border-primary border-t-transparent rounded-full" />
+        <div className="flex flex-col items-center justify-center py-16 gap-3">
+          <div className="animate-spin h-8 w-8 border-3 border-primary border-t-transparent rounded-full" />
           <p className="text-sm text-muted-foreground">Loading orders...</p>
         </div>
       ) : filtered.length === 0 ? (
-        <div className="text-center py-20">
-          <div className="h-20 w-20 mx-auto mb-4 rounded-full bg-muted/50 flex items-center justify-center">
-            <Package className="h-10 w-10 text-muted-foreground/30" />
-          </div>
-          <p className="font-heading font-bold text-lg">No orders found</p>
-          <p className="text-sm text-muted-foreground mt-1">
-            {filter === "all" ? "Browse suppliers to place your first order!" : "No orders with this status."}
+        <div className="text-center py-16">
+          <Package className="h-12 w-12 mx-auto text-muted-foreground/30 mb-3" />
+          <p className="font-semibold text-lg">No orders found</p>
+          <p className="text-sm text-muted-foreground mt-1 mb-5">
+            {filter === "all" ? "Your completed and cancelled orders will appear here." : "No orders with this status."}
           </p>
+          <Link to="/customer/products">
+            <Button className="rounded-lg gap-2">
+              <Droplets className="h-4 w-4" /> Browse Products
+            </Button>
+          </Link>
         </div>
       ) : (
-        <div className="space-y-3">
-          {filtered.map((order, i) => {
+        <div className="space-y-2">
+          {filtered.map((order) => {
             const existingFeedback = feedbackByOrder.get(order.id);
-            const canCancel = order.status === "placed" || order.status === "confirmed";
             const isExpanded = expandedId === order.id;
+            const isCancelled = order.status === "cancelled";
 
             return (
-              <motion.div key={order.id} variants={item}
-                className="glass-card rounded-2xl overflow-hidden hover:shadow-lg transition-all ring-1 ring-border/30">
+              <div key={order.id}
+                className="bg-card border border-border rounded-xl overflow-hidden hover:border-primary/20 transition-all">
                 
                 {/* Main row */}
                 <div className="p-4 cursor-pointer" onClick={() => setExpandedId(isExpanded ? null : order.id)}>
                   <div className="flex items-center gap-3">
-                    <div className="h-11 w-11 rounded-xl bg-gradient-to-br from-primary/10 to-accent/10 flex items-center justify-center text-lg shrink-0">
-                      {statusEmoji[order.status]}
+                    <div className={`h-10 w-10 rounded-lg flex items-center justify-center text-lg shrink-0 ${
+                      isCancelled ? "bg-red-50 dark:bg-red-900/10" : "bg-muted"
+                    }`}>
+                      {isCancelled ? "❌" : "💧"}
                     </div>
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 flex-wrap">
-                        <span className="font-heading font-semibold text-sm">{order.suppliers?.business_name ?? "Unknown"}</span>
-                        <span className={`px-2.5 py-0.5 rounded-lg text-[10px] font-bold border ${statusColors[order.status]}`}>
+                        <span className="font-medium text-sm">{order.suppliers?.business_name ?? "Unknown"}</span>
+                        <span className={`px-2 py-0.5 rounded-md text-[10px] font-medium ${statusColors[order.status]}`}>
                           {statusLabels[order.status]}
                         </span>
                       </div>
@@ -275,96 +255,75 @@ export default function OrderHistory() {
                       </div>
                     </div>
                     <div className="flex items-center gap-2 shrink-0">
-                      <span className="font-heading font-bold text-primary">₹{Number(order.total_amount)}</span>
+                      <span className={`font-semibold ${isCancelled ? "text-muted-foreground line-through" : "text-primary"}`}>
+                        ₹{Number(order.total_amount)}
+                      </span>
                       {isExpanded ? <ChevronUp className="h-4 w-4 text-muted-foreground" /> : <ChevronDown className="h-4 w-4 text-muted-foreground" />}
                     </div>
                   </div>
                 </div>
 
                 {/* Expanded details */}
-                <AnimatePresence>
-                  {isExpanded && (
-                    <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: "auto", opacity: 1 }} exit={{ height: 0, opacity: 0 }}
-                      className="overflow-hidden border-t border-border/30">
-                      <div className="p-4 space-y-3">
-                        {/* Order details */}
-                        <div className="grid grid-cols-2 gap-3 text-xs">
-                          <div className="bg-muted/30 rounded-lg p-2.5">
-                            <p className="text-muted-foreground mb-0.5">Order Date</p>
-                            <p className="font-medium">{new Date(order.created_at).toLocaleDateString("en-IN", { day: "numeric", month: "long", year: "numeric" })}</p>
-                          </div>
-                          <div className="bg-muted/30 rounded-lg p-2.5">
-                            <p className="text-muted-foreground mb-0.5">Supplier Area</p>
-                            <p className="font-medium flex items-center gap-1"><MapPin className="h-3 w-3" />{(order.suppliers as any)?.area ?? "N/A"}</p>
-                          </div>
+                {isExpanded && (
+                  <div className="border-t border-border">
+                    <div className="p-4 space-y-3">
+                      <div className="grid grid-cols-2 gap-3 text-xs">
+                        <div className="bg-muted/50 rounded-lg p-2.5">
+                          <p className="text-muted-foreground mb-0.5">Order Date</p>
+                          <p className="font-medium">{new Date(order.created_at).toLocaleDateString("en-IN", { day: "numeric", month: "long", year: "numeric" })}</p>
                         </div>
-                        
-                        {order.delivery_address && (
-                          <div className="flex items-start gap-2 text-xs text-muted-foreground bg-muted/20 rounded-lg p-2.5">
-                            <MapPin className="h-3 w-3 mt-0.5 text-primary shrink-0" />
-                            <span>{order.delivery_address}</span>
-                          </div>
-                        )}
-
-                        {/* Actions */}
-                        <div className="flex gap-2 flex-wrap">
-                          {canCancel && (
-                            <AlertDialog>
-                              <AlertDialogTrigger asChild>
-                                <Button size="sm" variant="destructive" className="gap-1.5 rounded-xl text-xs h-8">
-                                  <XCircle className="h-3 w-3" /> Cancel
-                                </Button>
-                              </AlertDialogTrigger>
-                              <AlertDialogContent>
-                                <AlertDialogHeader>
-                                  <AlertDialogTitle>Cancel this order?</AlertDialogTitle>
-                                  <AlertDialogDescription>
-                                    Order #{order.id.slice(0, 6)} will be cancelled. This cannot be undone.
-                                  </AlertDialogDescription>
-                                </AlertDialogHeader>
-                                <AlertDialogFooter>
-                                  <AlertDialogCancel>Keep Order</AlertDialogCancel>
-                                  <AlertDialogAction onClick={() => cancelOrder(order.id)}
-                                    className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
-                                    Yes, Cancel
-                                  </AlertDialogAction>
-                                </AlertDialogFooter>
-                              </AlertDialogContent>
-                            </AlertDialog>
-                          )}
-                          {order.status === "delivered" && (
-                            <Button size="sm" variant="outline" className="gap-1.5 rounded-xl text-xs h-8 glass" onClick={() => setReceiptOrder(order)}>
-                              <Printer className="h-3 w-3" /> Receipt
-                            </Button>
-                          )}
+                        <div className="bg-muted/50 rounded-lg p-2.5">
+                          <p className="text-muted-foreground mb-0.5">Supplier Area</p>
+                          <p className="font-medium flex items-center gap-1"><MapPin className="h-3 w-3" />{(order.suppliers as any)?.area ?? "N/A"}</p>
                         </div>
-
-                        {/* Review */}
-                        {order.status === "delivered" && !existingFeedback && (
-                          <RatingWidget orderId={order.id} supplierId={order.supplier_id} customerId={user!.id}
-                            onDone={() => queryClient.invalidateQueries({ queryKey: ["my-feedbacks"] })} />
-                        )}
-                        {existingFeedback && (
-                          <div className="p-3 rounded-xl bg-warning/5 border border-warning/10 flex items-center gap-2">
-                            <div className="flex">
-                              {[1, 2, 3, 4, 5].map(s => (
-                                <Star key={s} className={`h-4 w-4 ${s <= existingFeedback.rating ? "fill-warning text-warning" : "text-muted-foreground/20"}`} />
-                              ))}
-                            </div>
-                            {existingFeedback.comment && <span className="text-xs text-muted-foreground ml-2 truncate">{existingFeedback.comment}</span>}
-                          </div>
-                        )}
                       </div>
-                    </motion.div>
-                  )}
-                </AnimatePresence>
-              </motion.div>
+
+                      {isCancelled && (
+                        <div className="flex items-center gap-2 text-xs bg-red-50 dark:bg-red-900/10 border border-red-100 dark:border-red-900/20 rounded-lg p-3">
+                          <XCircle className="h-4 w-4 text-red-500 shrink-0" />
+                          <span className="text-red-600 dark:text-red-400 font-medium">This order was cancelled</span>
+                        </div>
+                      )}
+                      
+                      {order.delivery_address && (
+                        <div className="flex items-start gap-2 text-xs text-muted-foreground bg-muted/30 rounded-lg p-2.5">
+                          <MapPin className="h-3 w-3 mt-0.5 text-primary shrink-0" />
+                          <span>{order.delivery_address}</span>
+                        </div>
+                      )}
+
+                      {order.status === "delivered" && (
+                        <div className="flex gap-2">
+                          <Button size="sm" variant="outline" className="gap-1.5 rounded-lg text-xs h-8" onClick={() => setReceiptOrder(order)}>
+                            <Printer className="h-3 w-3" /> Receipt
+                          </Button>
+                        </div>
+                      )}
+
+                      {order.status === "delivered" && !existingFeedback && (
+                        <RatingWidget orderId={order.id} supplierId={order.supplier_id} customerId={user!.id}
+                          onDone={() => queryClient.invalidateQueries({ queryKey: ["my-feedbacks"] })} />
+                      )}
+                      {existingFeedback && (
+                        <div className="p-3 rounded-lg bg-amber-50/50 dark:bg-amber-900/10 border border-amber-100 dark:border-amber-900/20 flex items-center gap-2">
+                          <div className="flex">
+                            {[1, 2, 3, 4, 5].map(s => (
+                              <Star key={s} className={`h-4 w-4 ${s <= existingFeedback.rating ? "fill-amber-400 text-amber-400" : "text-muted-foreground/20"}`} />
+                            ))}
+                          </div>
+                          {existingFeedback.comment && <span className="text-xs text-muted-foreground ml-2 truncate">{existingFeedback.comment}</span>}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
+              </div>
             );
           })}
         </div>
       )}
 
       {receiptOrder && <ReceiptModal order={receiptOrder} onClose={() => setReceiptOrder(null)} />}
-    </motion.div>
+    </div>
   );
 }

@@ -2,6 +2,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
+import { getProductImageUrl } from "@/lib/product-images";
 
 export interface CartItem {
   id: string;
@@ -35,7 +36,15 @@ export function useCart() {
         .eq("user_id", user!.id)
         .order("created_at", { ascending: false });
       if (error) throw error;
-      return (data as any[]) as CartItem[];
+      return ((data as any[]) || []).map(item => ({
+        ...item,
+        product: item.product
+          ? {
+              ...item.product,
+              image_url: getProductImageUrl(item.product),
+            }
+          : item.product,
+      })) as CartItem[];
     },
     enabled: !!user,
   });

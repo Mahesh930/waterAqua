@@ -99,6 +99,7 @@ export default function ManageOrders() {
     { key: "confirmed", label: "Confirmed", count: orders.filter(o => o.status === "confirmed").length },
     { key: "out_for_delivery", label: "Dispatched", count: orders.filter(o => o.status === "out_for_delivery").length },
     { key: "delivered", label: "Delivered", count: orders.filter(o => o.status === "delivered").length },
+    { key: "cancelled", label: "Cancelled", count: orders.filter(o => o.status === "cancelled").length },
   ];
 
   return (

@@ -34,12 +34,12 @@ export interface Feedback {
 }
 
 export const suppliers: Supplier[] = [
-  { id: "1", name: "PureFlow Water Co.", area: "Koramangala", rating: 4.8, reviewCount: 234, pricePerCan: 40, waterType: "RO Purified", minOrder: 1, deliveryTime: "30-45 min", image: "💧", available: true },
-  { id: "2", name: "AquaPure Solutions", area: "Indiranagar", rating: 4.6, reviewCount: 189, pricePerCan: 35, waterType: "Mineral", minOrder: 2, deliveryTime: "45-60 min", image: "🏔️", available: true },
-  { id: "3", name: "Crystal Clear Water", area: "HSR Layout", rating: 4.9, reviewCount: 312, pricePerCan: 45, waterType: "RO + UV", minOrder: 1, deliveryTime: "20-35 min", image: "✨", available: true },
-  { id: "4", name: "FreshDrop Delivery", area: "Whitefield", rating: 4.4, reviewCount: 156, pricePerCan: 30, waterType: "RO Purified", minOrder: 3, deliveryTime: "60-90 min", image: "🌊", available: true },
-  { id: "5", name: "HydraLife Premium", area: "JP Nagar", rating: 4.7, reviewCount: 278, pricePerCan: 50, waterType: "Mineral + Alkaline", minOrder: 1, deliveryTime: "25-40 min", image: "💎", available: false },
-  { id: "6", name: "CleanWave Services", area: "BTM Layout", rating: 4.3, reviewCount: 98, pricePerCan: 28, waterType: "RO Purified", minOrder: 2, deliveryTime: "40-55 min", image: "🌀", available: true },
+  { id: "1", name: "PureFlow Water Co.", area: "Koramangala", rating: 4.8, reviewCount: 234, pricePerCan: 40, waterType: "RO Purified", minOrder: 1, deliveryTime: "30-45 min", image: "/product-images/can-20l.png", available: true },
+  { id: "2", name: "AquaPure Solutions", area: "Indiranagar", rating: 4.6, reviewCount: 189, pricePerCan: 35, waterType: "Mineral", minOrder: 2, deliveryTime: "45-60 min", image: "/product-images/bottle-1l.png", available: true },
+  { id: "3", name: "Crystal Clear Water", area: "HSR Layout", rating: 4.9, reviewCount: 312, pricePerCan: 45, waterType: "RO + UV", minOrder: 1, deliveryTime: "20-35 min", image: "/product-images/jar-15l.png", available: true },
+  { id: "4", name: "FreshDrop Delivery", area: "Whitefield", rating: 4.4, reviewCount: 156, pricePerCan: 30, waterType: "RO Purified", minOrder: 3, deliveryTime: "60-90 min", image: "/product-images/can-20l.png", available: true },
+  { id: "5", name: "HydraLife Premium", area: "JP Nagar", rating: 4.7, reviewCount: 278, pricePerCan: 50, waterType: "Mineral + Alkaline", minOrder: 1, deliveryTime: "25-40 min", image: "/product-images/bottle-1l.png", available: false },
+  { id: "6", name: "CleanWave Services", area: "BTM Layout", rating: 4.3, reviewCount: 98, pricePerCan: 28, waterType: "RO Purified", minOrder: 2, deliveryTime: "40-55 min", image: "/product-images/can-20l.png", available: true },
 ];
 
 export const customerOrders: Order[] = [
