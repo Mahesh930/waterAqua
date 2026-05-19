@@ -83,6 +83,9 @@ export default function AdminUsers() {
                   <p className="font-heading font-semibold text-sm truncate">{c.full_name || "Unnamed"}</p>
                   <div className="flex items-center gap-3 text-xs text-muted-foreground mt-0.5">
                     {c.phone && <span className="flex items-center gap-0.5"><Phone className="h-3 w-3" />{c.phone}</span>}
+                    {c.email && <span className="hidden sm:inline">·</span>}
+                    {c.email && <span className="hidden sm:inline truncate max-w-[150px]">{c.email}</span>}
+                    <span>·</span>
                     <span>{customerOrders.length} orders</span>
                     <span className="font-medium text-foreground">₹{spent}</span>
                   </div>

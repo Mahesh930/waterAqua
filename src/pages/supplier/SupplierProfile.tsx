@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
-import { Star, Truck, Phone, Hash, Droplets, Navigation, MapPin, Save, Shield, CheckCircle2 } from "lucide-react";
+import { Star, Truck, Phone, Hash, Droplets, Navigation, MapPin, Save, Shield, CheckCircle2, Locate } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
@@ -45,6 +45,8 @@ export default function SupplierProfile() {
     business_name: "", area: "", price_per_can: 40, price_per_tanker: 500,
     water_type: "RO Purified", stock: 0, delivery_time: "30-45 min",
     tanker_capacity: 5000, driver_phone: "", vehicle_number: "", pincode: "", available: true,
+    latitude: null as number | null, longitude: null as number | null,
+    address: "",
   });
 
   useEffect(() => {
@@ -56,6 +58,8 @@ export default function SupplierProfile() {
         delivery_time: supplier.delivery_time, tanker_capacity: supplier.tanker_capacity,
         driver_phone: supplier.driver_phone ?? "", vehicle_number: supplier.vehicle_number ?? "",
         pincode: supplier.pincode ?? "", available: supplier.available,
+        latitude: supplier.latitude, longitude: supplier.longitude,
+        address: supplier.address ?? "",
       });
     }
   }, [supplier]);
@@ -68,6 +72,20 @@ export default function SupplierProfile() {
     const { error } = await supabase.from("suppliers").update(form as any).eq("id", supplier.id);
     if (error) toast({ title: "Update failed", description: error.message, variant: "destructive" });
     else { toast({ title: "Profile updated! ✅" }); queryClient.invalidateQueries({ queryKey: ["my-supplier"] }); }
+  };
+
+  const handleSetLocation = () => {
+    if (!navigator.geolocation) {
+      toast({ title: "GPS not supported", variant: "destructive" });
+      return;
+    }
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        setForm(prev => ({ ...prev, latitude: pos.coords.latitude, longitude: pos.coords.longitude }));
+        toast({ title: "Current location set!", description: "Save to update your business coordinates." });
+      },
+      () => toast({ title: "Location access denied", variant: "destructive" })
+    );
   };
 
   if (!supplier) return (
@@ -147,9 +165,17 @@ export default function SupplierProfile() {
             )}
           </div>
           <div className="sm:col-span-2"><Label className="text-xs">Service Area</Label><Input className="mt-1 rounded-xl" value={form.area} onChange={e => setForm({ ...form, area: e.target.value })} /></div>
+          <div className="sm:col-span-2"><Label className="text-xs">Full Business Address (Manual)</Label><Input className="mt-1 rounded-xl" placeholder="e.g. Shop No. 4, MG Road, Bangalore" value={form.address} onChange={e => setForm({ ...form, address: e.target.value })} /></div>
           <div><Label className="text-xs">Water Type</Label><Input className="mt-1 rounded-xl" value={form.water_type} onChange={e => setForm({ ...form, water_type: e.target.value })} /></div>
           <div><Label className="text-xs">Stock (cans)</Label><Input type="number" className="mt-1 rounded-xl" value={form.stock} onChange={e => setForm({ ...form, stock: Number(e.target.value) })} /></div>
           <div><Label className="text-xs">Delivery Time</Label><Input className="mt-1 rounded-xl" value={form.delivery_time} onChange={e => setForm({ ...form, delivery_time: e.target.value })} /></div>
+          <div className="flex flex-col justify-end">
+            <Label className="text-xs mb-1">Business Geolocation</Label>
+            <Button variant="outline" size="sm" onClick={handleSetLocation} className="rounded-xl gap-2 h-10 border-dashed border-primary/40 hover:border-primary/60">
+              <Locate className="h-4 w-4" />
+              {form.latitude ? `${form.latitude.toFixed(4)}, ${form.longitude?.toFixed(4)}` : "Update GPS Coordinates"}
+            </Button>
+          </div>
         </div>
       </motion.div>
 

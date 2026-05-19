@@ -299,6 +299,9 @@ export type Database = {
           referral_credits: number | null
           updated_at: string
           user_id: string
+          email: string | null
+          latitude: number | null
+          longitude: number | null
         }
         Insert: {
           avatar_url?: string | null
@@ -310,6 +313,9 @@ export type Database = {
           referral_credits?: number | null
           updated_at?: string
           user_id: string
+          email?: string | null
+          latitude?: number | null
+          longitude?: number | null
         }
         Update: {
           avatar_url?: string | null
@@ -321,6 +327,9 @@ export type Database = {
           referral_credits?: number | null
           updated_at?: string
           user_id?: string
+          email?: string | null
+          latitude?: number | null
+          longitude?: number | null
         }
         Relationships: []
       }
@@ -417,6 +426,9 @@ export type Database = {
           user_id: string
           vehicle_number: string | null
           water_type: string
+          latitude: number | null
+          longitude: number | null
+          address: string | null
         }
         Insert: {
           area: string
@@ -439,6 +451,9 @@ export type Database = {
           user_id: string
           vehicle_number?: string | null
           water_type?: string
+          latitude?: number | null
+          longitude?: number | null
+          address?: string | null
         }
         Update: {
           area?: string
@@ -461,6 +476,9 @@ export type Database = {
           user_id?: string
           vehicle_number?: string | null
           water_type?: string
+          latitude?: number | null
+          longitude?: number | null
+          address?: string | null
         }
         Relationships: []
       }

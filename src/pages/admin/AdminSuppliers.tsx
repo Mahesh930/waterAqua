@@ -1,12 +1,19 @@
 import { useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Truck, MapPin, Star, ShieldBan, ShieldCheck, Search, Clock, Package, ChevronRight, TrendingUp } from "lucide-react";
+import { Truck, MapPin, Star, ShieldBan, ShieldCheck, Search, Clock, Package, ChevronRight, TrendingUp, Phone, Mail, User, Info, Building } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from "@/components/ui/dialog";
 
 const container = { hidden: {}, show: { transition: { staggerChildren: 0.05 } } };
 const item = { hidden: { opacity: 0, y: 15 }, show: { opacity: 1, y: 0 } };
@@ -15,6 +22,7 @@ export default function AdminSuppliers() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [search, setSearch] = useState("");
+  const [selectedSupplier, setSelectedSupplier] = useState<any>(null);
 
   const { data: suppliers = [], isLoading: suppliersLoading } = useQuery({
     queryKey: ["admin-suppliers-dedicated"],
@@ -23,6 +31,15 @@ export default function AdminSuppliers() {
         .from("suppliers")
         .select("*")
         .order("business_name", { ascending: true });
+      if (error) throw error;
+      return data;
+    },
+  });
+
+  const { data: profiles = [] } = useQuery({
+    queryKey: ["admin-profiles-for-suppliers"],
+    queryFn: async () => {
+      const { data, error } = await supabase.from("profiles").select("user_id, full_name, phone, email");
       if (error) throw error;
       return data;
     },
@@ -40,13 +57,19 @@ export default function AdminSuppliers() {
     },
   });
 
-  const filteredSuppliers = suppliers.filter(s => 
+  const suppliersWithProfiles = suppliers.map((s: any) => ({
+    ...s,
+    profiles: profiles.find((p: any) => p.user_id === s.user_id)
+  }));
+
+  const filteredSuppliers = suppliersWithProfiles.filter((s: any) => 
     !search || 
     s.business_name.toLowerCase().includes(search.toLowerCase()) || 
     s.area.toLowerCase().includes(search.toLowerCase())
   );
 
-  const toggleBlock = async (supplierId: string, currentBlocked: boolean) => {
+  const toggleBlock = async (e: React.MouseEvent, supplierId: string, currentBlocked: boolean) => {
+    e.stopPropagation();
     const { error } = await supabase
       .from("suppliers")
       .update({ blocked: !currentBlocked } as any)
@@ -60,7 +83,8 @@ export default function AdminSuppliers() {
     }
   };
 
-  const toggleAvailability = async (supplierId: string, currentAvailable: boolean) => {
+  const toggleAvailability = async (e: React.MouseEvent, supplierId: string, currentAvailable: boolean) => {
+    e.stopPropagation();
     const { error } = await supabase
       .from("suppliers")
       .update({ available: !currentAvailable })
@@ -86,10 +110,10 @@ export default function AdminSuppliers() {
         </div>
         <div className="flex items-center gap-2">
            <Badge variant="secondary" className="px-3 py-1 rounded-lg bg-success/10 text-success border-success/20">
-             {suppliers.filter(s => s.available && !s.blocked).length} Active
+             {suppliers.filter((s: any) => s.available && !s.blocked).length} Active
            </Badge>
            <Badge variant="secondary" className="px-3 py-1 rounded-lg bg-destructive/10 text-destructive border-destructive/20">
-             {suppliers.filter(s => s.blocked).length} Blocked
+             {suppliers.filter((s: any) => s.blocked).length} Blocked
            </Badge>
         </div>
       </motion.div>
@@ -119,13 +143,18 @@ export default function AdminSuppliers() {
         </div>
       ) : (
         <div className="grid gap-4">
-          {filteredSuppliers.map((s) => {
+          {filteredSuppliers.map((s: any) => {
             const supplierOrders = orders.filter(o => o.supplier_id === s.id);
             const revenue = supplierOrders.filter(o => o.status === "delivered").reduce((sum, o) => sum + Number(o.total_amount), 0);
             const recentOrder = supplierOrders[0];
 
             return (
-              <motion.div key={s.id} variants={item} className="glass-card rounded-2xl overflow-hidden hover:shadow-xl transition-all duration-300">
+              <motion.div 
+                key={s.id} 
+                variants={item} 
+                onClick={() => setSelectedSupplier(s)}
+                className="glass-card rounded-2xl overflow-hidden hover:shadow-xl transition-all duration-300 cursor-pointer border border-transparent hover:border-primary/20"
+              >
                 <div className="p-5">
                   <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
                     {/* Supplier Info */}
@@ -174,7 +203,7 @@ export default function AdminSuppliers() {
                         size="sm" 
                         variant={s.blocked ? "default" : "destructive"} 
                         className="gap-1.5 rounded-xl flex-1 shadow-sm" 
-                        onClick={() => toggleBlock(s.id, s.blocked)}
+                        onClick={(e) => toggleBlock(e, s.id, s.blocked)}
                       >
                         {s.blocked ? <><ShieldCheck className="h-3.5 w-3.5" /> Unblock</> : <><ShieldBan className="h-3.5 w-3.5" /> Block</>}
                       </Button>
@@ -182,7 +211,7 @@ export default function AdminSuppliers() {
                         size="sm" 
                         variant="outline" 
                         className="rounded-xl glass flex-1 border-border/50" 
-                        onClick={() => toggleAvailability(s.id, s.available)}
+                        onClick={(e) => toggleAvailability(e, s.id, s.available)}
                       >
                         {s.available ? "Deactivate" : "Activate"}
                       </Button>
@@ -202,7 +231,7 @@ export default function AdminSuppliers() {
                       )}
                     </div>
                     {recentOrder ? (
-                      <div className="flex items-center justify-between p-3 rounded-xl bg-muted/30 border border-border/50">
+                      <div className="flex items-center justify-between p-3 rounded-xl bg-muted/30 border border-border/50 group-hover:bg-muted/50 transition-colors">
                         <div className="flex items-center gap-3">
                           <Package className="h-4 w-4 text-primary" />
                           <div>
@@ -222,6 +251,118 @@ export default function AdminSuppliers() {
           })}
         </div>
       )}
+
+      {/* Supplier Details Dialog */}
+      <Dialog open={!!selectedSupplier} onOpenChange={() => setSelectedSupplier(null)}>
+        <DialogContent className="sm:max-w-xl rounded-3xl p-0 overflow-hidden border-0 shadow-2xl">
+          {selectedSupplier && (
+            <div className="flex flex-col">
+              {/* Cover/Header */}
+              <div className="h-32 bg-gradient-to-br from-primary via-blue-600 to-accent p-6 relative">
+                <div className="absolute inset-0 opacity-10 bg-[radial-gradient(circle_at_center,_var(--tw-gradient-stops))] from-white to-transparent" />
+                <div className="relative z-10 flex items-center gap-4 mt-8">
+                  <div className="h-20 w-20 rounded-2xl bg-card shadow-xl flex items-center justify-center text-3xl border-4 border-card">
+                    🚛
+                  </div>
+                  <div className="text-white">
+                    <h2 className="text-2xl font-bold font-heading">{selectedSupplier.business_name}</h2>
+                    <p className="text-white/80 text-sm flex items-center gap-1">
+                      <MapPin className="h-3.5 w-3.5" /> {selectedSupplier.area}, {selectedSupplier.pincode}
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              <div className="p-6 pt-12 space-y-6">
+                {/* Contact Section */}
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                  <div className="glass-card rounded-2xl p-4 flex items-center gap-3">
+                    <div className="h-10 w-10 rounded-xl bg-primary/10 flex items-center justify-center">
+                      <User className="h-5 w-5 text-primary" />
+                    </div>
+                    <div>
+                      <p className="text-[10px] text-muted-foreground uppercase font-bold">Owner Name</p>
+                      <p className="text-sm font-semibold truncate">{selectedSupplier.profiles?.full_name || "Not Provided"}</p>
+                    </div>
+                  </div>
+                  <div className="glass-card rounded-2xl p-4 flex items-center gap-3">
+                    <div className="h-10 w-10 rounded-xl bg-accent/10 flex items-center justify-center">
+                      <Phone className="h-5 w-5 text-accent" />
+                    </div>
+                    <div>
+                      <p className="text-[10px] text-muted-foreground uppercase font-bold">Contact No</p>
+                      <p className="text-sm font-semibold">{selectedSupplier.profiles?.phone || "Not Provided"}</p>
+                    </div>
+                  </div>
+                  <div className="glass-card rounded-2xl p-4 flex items-center gap-3 sm:col-span-1">
+                    <div className="h-10 w-10 rounded-xl bg-violet-500/10 flex items-center justify-center">
+                      <Mail className="h-5 w-5 text-violet-500" />
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <p className="text-[10px] text-muted-foreground uppercase font-bold">Email Address</p>
+                      <p className="text-sm font-semibold truncate" title={selectedSupplier.profiles?.email}>
+                        {selectedSupplier.profiles?.email || "Not Provided"}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Business Details */}
+                <div className="space-y-3">
+                  <h4 className="text-xs font-bold text-muted-foreground uppercase tracking-widest flex items-center gap-2">
+                    <Building className="h-3.5 w-3.5" /> Business Information
+                  </h4>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="p-3 rounded-xl bg-muted/30 border border-border/50">
+                      <p className="text-[10px] text-muted-foreground">Water Type</p>
+                      <p className="text-sm font-medium">{selectedSupplier.water_type}</p>
+                    </div>
+                    <div className="p-3 rounded-xl bg-muted/30 border border-border/50">
+                      <p className="text-[10px] text-muted-foreground">Delivery Time</p>
+                      <p className="text-sm font-medium">{selectedSupplier.delivery_time}</p>
+                    </div>
+                    <div className="p-3 rounded-xl bg-muted/30 border border-border/50">
+                      <p className="text-[10px] text-muted-foreground">Vehicle No</p>
+                      <p className="text-sm font-medium">{selectedSupplier.vehicle_number || "NA"}</p>
+                    </div>
+                    <div className="p-3 rounded-xl bg-muted/30 border border-border/50">
+                      <p className="text-[10px] text-muted-foreground">Driver Contact</p>
+                      <p className="text-sm font-medium">{selectedSupplier.driver_phone || "NA"}</p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Pricing & Stock */}
+                <div className="space-y-3">
+                  <h4 className="text-xs font-bold text-muted-foreground uppercase tracking-widest flex items-center gap-2">
+                    <Info className="h-3.5 w-3.5" /> Pricing & Inventory
+                  </h4>
+                  <div className="flex gap-4">
+                    <div className="flex-1 p-4 rounded-2xl bg-primary/5 border border-primary/10">
+                      <p className="text-xs text-primary font-semibold">Can Price</p>
+                      <p className="text-2xl font-bold font-heading">₹{Number(selectedSupplier.price_per_can)}</p>
+                    </div>
+                    <div className="flex-1 p-4 rounded-2xl bg-accent/5 border border-accent/10">
+                      <p className="text-xs text-accent font-semibold">Tanker Price</p>
+                      <p className="text-2xl font-bold font-heading">₹{Number(selectedSupplier.price_per_tanker)}</p>
+                    </div>
+                    <div className="flex-1 p-4 rounded-2xl bg-muted/50 border border-border">
+                      <p className="text-xs text-muted-foreground font-semibold">Stock</p>
+                      <p className="text-2xl font-bold font-heading">{selectedSupplier.stock}</p>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="flex gap-3 pt-2">
+                  <Button className="flex-1 rounded-xl h-11" onClick={() => setSelectedSupplier(null)}>
+                    Close Details
+                  </Button>
+                </div>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </motion.div>
   );
 }

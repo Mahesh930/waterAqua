@@ -10,6 +10,7 @@ import { estimateDeliveryTime } from "@/lib/delivery-estimate";
 import { getProductImageUrl } from "@/lib/product-images";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
+import { useLocation, calculateDistance } from "@/hooks/use-location";
 
 const categories = [
   { key: "all", label: "All Products" },
@@ -23,10 +24,10 @@ export default function ProductCatalog() {
   const [search, setSearch] = useState("");
   const [category, setCategory] = useState("all");
   const [pincodeInput, setPincodeInput] = useState("");
-  const [gpsLoading, setGpsLoading] = useState(false);
   const { addToCart } = useCart();
   const { lookup, data: pincodeData, loading: pincodeLoading } = usePincode();
   const { toast } = useToast();
+  const { location: userCoords, loading: locationLoading, refreshLocation } = useLocation();
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -39,7 +40,10 @@ export default function ProductCatalog() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("products")
-        .select("*, suppliers(id, business_name, area, pincode, rating, review_count, available, blocked)")
+        .select(`
+          *, 
+          suppliers(id, business_name, area, pincode, rating, review_count, available, blocked, latitude, longitude)
+        `)
         .eq("active", true)
         .order("price", { ascending: true });
       if (error) throw error;
@@ -64,38 +68,29 @@ export default function ProductCatalog() {
   }, [pincodeInput, lookup]);
 
   const handleGPS = () => {
-    if (!navigator.geolocation) {
-      toast({ title: "GPS not supported", variant: "destructive" });
-      return;
-    }
+    refreshLocation();
+  };
 
-    setGpsLoading(true);
-    navigator.geolocation.getCurrentPosition(
-      async (pos) => {
+  // Auto-fill pincode from GPS coordinates if available
+  useEffect(() => {
+    if (userCoords && pincodeInput === "") {
+      const fetchPincode = async () => {
         try {
           const res = await fetch(
-            `https://nominatim.openstreetmap.org/reverse?lat=${pos.coords.latitude}&lon=${pos.coords.longitude}&format=json&addressdetails=1`
+            `https://nominatim.openstreetmap.org/reverse?lat=${userCoords.lat}&lon=${userCoords.lng}&format=json&addressdetails=1`
           );
           const data = await res.json();
           const postcode = data.address?.postcode;
           if (postcode && postcode.length === 6) {
             setPincodeInput(postcode);
-            toast({ title: "Location detected", description: `Pincode: ${postcode}` });
-          } else {
-            toast({ title: "Could not detect pincode", description: "Please enter manually" });
           }
-        } catch {
-          toast({ title: "Location lookup failed", variant: "destructive" });
+        } catch (e) {
+          console.error("Reverse geocoding failed", e);
         }
-        setGpsLoading(false);
-      },
-      () => {
-        toast({ title: "Location access denied", variant: "destructive" });
-        setGpsLoading(false);
-      },
-      { enableHighAccuracy: true, timeout: 10000 },
-    );
-  };
+      };
+      fetchPincode();
+    }
+  }, [userCoords]);
 
   const { nearbyProducts, otherProducts } = useMemo(() => {
     let list = products.filter(p => {
@@ -117,20 +112,35 @@ export default function ProductCatalog() {
       return true;
     });
 
-    if (!pincodeData || pincodeInput.length !== 6) {
-      return { nearbyProducts: list, otherProducts: [] as any[] };
-    }
+    list = list.map(p => {
+      const supplier = p.suppliers;
+      let dist = null;
 
+      // Real coordinates take precedence
+      if (userCoords && supplier.latitude && supplier.longitude) {
+        dist = calculateDistance(userCoords.lat, userCoords.lng, supplier.latitude, supplier.longitude);
+      } else if (pincodeInput.length === 6) {
+        // Fallback to pincode heuristic
+        const { distanceKm } = estimateDeliveryTime(supplier.pincode, pincodeInput);
+        dist = distanceKm;
+      }
+      
+      return { ...p, distanceKm: dist };
+    });
+
+    const serving: any[] = [];
+    const other: any[] = [];
+
+    // Filter by serviceability
     const pincodePrefix = pincodeInput.slice(0, 3);
-    const districtLower = pincodeData.district?.toLowerCase() || "";
-    const cityLower = pincodeData.city?.toLowerCase() || "";
-    const areaLower = pincodeData.area?.toLowerCase() || "";
+    const cityLower = pincodeData?.city?.toLowerCase() || "";
+    const areaLower = pincodeData?.area?.toLowerCase() || "";
 
     const servicingSupplierIds = new Set(
       serviceAreas
         .filter(sa => {
-          if (sa.pincode === pincodeInput) return true;
-          if (sa.pincode?.slice(0, 3) === pincodePrefix) return true;
+          if (pincodeInput && sa.pincode === pincodeInput) return true;
+          if (pincodeInput && sa.pincode?.slice(0, 3) === pincodePrefix) return true;
           const saCity = sa.city?.toLowerCase() || "";
           const saArea = sa.area_name?.toLowerCase() || "";
           return (saCity && cityLower && (saCity.includes(cityLower) || cityLower.includes(saCity))) ||
@@ -139,40 +149,29 @@ export default function ProductCatalog() {
         .map(sa => sa.supplier_id),
     );
 
-    const serving: any[] = [];
-    const other: any[] = [];
-
     list.forEach(p => {
       const supplier = p.suppliers;
-      const supplierPincode = supplier.pincode || "";
-      const supplierArea = supplier.area?.toLowerCase() || "";
-
-      // Calculate distance using our heuristic
-      const { distanceKm } = estimateDeliveryTime(supplierPincode, pincodeInput);
-      p.distanceKm = distanceKm; // Attach for rendering
-
-      const exactPincode = supplierPincode === pincodeInput;
+      const exactPincode = pincodeInput && supplier.pincode === pincodeInput;
       const hasServiceArea = servicingSupplierIds.has(supplier.id);
-      const isClose = distanceKm < 5; // The 5KM requirement
+      const isClose = p.distanceKm !== null && p.distanceKm < 5;
 
-      if (exactPincode || hasServiceArea || isClose) {
+      if (exactPincode || hasServiceArea || isClose || (!pincodeInput && !userCoords)) {
         serving.push(p);
       } else {
         other.push(p);
       }
     });
 
-    // Sort serving by distance
-    serving.sort((a, b) => (a.distanceKm || 0) - (b.distanceKm || 0));
+    serving.sort((a, b) => (a.distanceKm ?? 999) - (b.distanceKm ?? 999));
 
     return { nearbyProducts: serving, otherProducts: other };
-  }, [products, serviceAreas, pincodeData, pincodeInput, category, search]);
+  }, [products, serviceAreas, pincodeData, pincodeInput, userCoords, category, search]);
 
-  const hasPincode = pincodeInput.length === 6 && pincodeData;
+  const hasPincode = (pincodeInput.length === 6 && pincodeData) || userCoords;
   const totalResults = nearbyProducts.length + otherProducts.length;
 
   const renderProduct = (product: any) => {
-    const eta = hasPincode ? estimateDeliveryTime(product.suppliers?.pincode, pincodeInput) : null;
+    const eta = pincodeInput.length === 6 ? estimateDeliveryTime(product.suppliers?.pincode, pincodeInput) : null;
     const inStock = product.stock > 0;
     const imageUrl = getProductImageUrl(product);
 
@@ -187,7 +186,7 @@ export default function ProductCatalog() {
             !inStock
               ? "bg-red-50 text-red-600 dark:bg-red-900/20 dark:text-red-400"
               : product.stock < 10
-                ? "bg-amber-50 text-amber-600 dark:bg-amber-900/20 dark:text-amber-400"
+                ? "bg-amber-50 text-amber-600 dark:bg-red-900/20 dark:text-red-400"
                 : "bg-emerald-50 text-emerald-600 dark:bg-emerald-900/20 dark:text-emerald-400"
           }`}>
             {!inStock ? "Out of stock" : product.stock < 10 ? `${product.stock} left` : "In stock"}
@@ -211,16 +210,16 @@ export default function ProductCatalog() {
             )}
           </div>
 
-          {eta && (
+          {(product.distanceKm !== null || eta) && (
             <div className="flex flex-col gap-1 mt-1.5">
               <div className="flex items-center gap-1 text-xs text-primary">
                 <Clock className="h-3 w-3" />
-                <span className="font-medium">{eta.label}</span>
+                <span className="font-medium">{eta?.label || "Fast Delivery"}</span>
               </div>
-              {eta.distanceKm && (
+              {product.distanceKm !== null && (
                 <div className="flex items-center gap-1 text-[10px] text-muted-foreground">
                   <Navigation className="h-2.5 w-2.5" />
-                  <span>{eta.distanceKm.toFixed(1)} KM away</span>
+                  <span>{product.distanceKm.toFixed(1)} KM away</span>
                 </div>
               )}
             </div>
@@ -252,8 +251,8 @@ export default function ProductCatalog() {
       <div>
         <h1 className="text-2xl font-semibold">Products</h1>
         <p className="text-sm text-muted-foreground mt-1">
-          {hasPincode
-            ? `${nearbyProducts.length} product${nearbyProducts.length !== 1 ? "s" : ""} near ${pincodeData.area}, ${pincodeData.district}`
+          {hasPincode && nearbyProducts.length > 0
+            ? `${nearbyProducts.length} product${nearbyProducts.length !== 1 ? "s" : ""} near you`
             : `Browse ${totalResults}+ products from verified suppliers`}
         </p>
       </div>
@@ -280,18 +279,18 @@ export default function ProductCatalog() {
                 maxLength={6}
               />
             </div>
-            <Button variant="outline" size="icon" className="h-10 w-10 rounded-lg shrink-0" onClick={handleGPS} disabled={gpsLoading}>
-              <Locate className={`h-4 w-4 ${gpsLoading ? "animate-spin" : ""}`} />
+            <Button variant="outline" size="icon" className="h-10 w-10 rounded-lg shrink-0" onClick={handleGPS} disabled={locationLoading}>
+              <Locate className={`h-4 w-4 ${locationLoading ? "animate-spin" : ""}`} />
             </Button>
           </div>
         </div>
-        {pincodeLoading && (
+        {(pincodeLoading || locationLoading) && (
           <p className="text-xs text-primary flex items-center gap-1.5">
             <span className="h-3 w-3 rounded-full border-2 border-primary border-t-transparent animate-spin" />
             Finding suppliers near you...
           </p>
         )}
-        {pincodeData && (
+        {pincodeData && !locationLoading && (
           <div className="flex items-center gap-2 p-2.5 rounded-lg bg-primary/5 border border-primary/10">
             <MapPin className="h-3.5 w-3.5 text-primary shrink-0" />
             <span className="text-sm font-medium flex-1">{pincodeData.area}, {pincodeData.city}</span>
@@ -353,7 +352,7 @@ export default function ProductCatalog() {
                 <div className="flex items-center gap-2 mb-4">
                   <MapPin className="h-4 w-4 text-primary" />
                   <h3 className="font-semibold">Near You</h3>
-                  <Badge variant="secondary" className="bg-primary/10 text-primary border-primary/20 text-[10px]">Within 5KM</Badge>
+                  <Badge variant="secondary" className="bg-primary/10 text-primary border-primary/20 text-[10px]">Distance Sorted</Badge>
                   <span className="text-xs text-muted-foreground ml-1">
                     {nearbyProducts.length} product{nearbyProducts.length !== 1 ? "s" : ""}
                   </span>

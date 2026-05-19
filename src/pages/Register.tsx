@@ -27,6 +27,18 @@ export default function Register() {
     e.preventDefault();
     setLoading(true);
 
+    // Password policy validation
+    const passwordRegex = /^(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*()_+{}[\]:;<>,.?~\\/-]).{8,}$/;
+    if (!passwordRegex.test(password)) {
+      toast({ 
+        title: "Weak Password", 
+        description: "Password must be at least 8 characters long and include 1 capital letter, 1 number, and 1 special symbol.", 
+        variant: "destructive" 
+      });
+      setLoading(false);
+      return;
+    }
+
     const { data, error } = await supabase.auth.signUp({
       email,
       password,
@@ -37,7 +49,12 @@ export default function Register() {
     });
 
     if (error) {
-      toast({ title: "Registration failed", description: error.message, variant: "destructive" });
+      console.error("Registration Error:", error);
+      toast({ 
+        title: "Registration failed", 
+        description: error.message || "Please check your details and try again.", 
+        variant: "destructive" 
+      });
       setLoading(false);
       return;
     }
@@ -49,7 +66,14 @@ export default function Register() {
       return;
     }
 
-    await supabase.from("profiles").update({ phone, full_name: name }).eq("user_id", userId);
+    // Ensure profile is updated/created with all details
+    await supabase.from("profiles").upsert({ 
+      user_id: userId, 
+      phone, 
+      full_name: name,
+      email: email 
+    }, { onConflict: 'user_id' });
+
     await supabase.from("user_roles").insert({ user_id: userId, role });
 
     // Handle referral code
@@ -75,6 +99,7 @@ export default function Register() {
         business_name: name,
         area: serviceArea,
         water_type: "RO Purified",
+        pincode: "", // Initial placeholder, can be updated in profile
       });
     }
 
@@ -143,6 +168,9 @@ export default function Register() {
                   {showPw ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                 </button>
               </div>
+              <p className="text-[10px] text-muted-foreground mt-1 px-1">
+                Min. 8 characters, 1 uppercase, 1 number, 1 symbol
+              </p>
             </div>
             {role === "supplier" && (
               <>
