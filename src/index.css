@@ -144,3 +144,115 @@
   0% { background-position: -200% 0; }
   100% { background-position: 200% 0; }
 }
+
+/* ==========================================
+   ✨ ADAPTIVE THEME UTILITY OVERRIDES
+   Maps hardcoded dark colors dynamically to
+   theme tokens for flawless light & dark modes.
+   ========================================== */
+
+/* Background Color Mappings */
+.bg-\[\#070b19\] {
+  background-color: hsl(var(--background)) !important;
+}
+.bg-\[\#070b19\]\/80 {
+  background-color: hsla(var(--background) / 0.8) !important;
+}
+.bg-\[\#070b19\]\/70 {
+  background-color: hsla(var(--background) / 0.7) !important;
+}
+.bg-\[\#050814\] {
+  background-color: hsl(var(--muted)) !important;
+}
+.bg-\[\#0f1430\] {
+  background-color: hsl(var(--muted)) !important;
+}
+
+/* Card Background Mappings */
+.bg-\[\#0e142e\] {
+  background-color: hsl(var(--card)) !important;
+}
+.bg-\[\#0e142e\]\/80 {
+  background-color: hsla(var(--card) / 0.8) !important;
+}
+.bg-\[\#0e142e\]\/60 {
+  background-color: hsla(var(--card) / 0.6) !important;
+}
+.bg-\[\#0e142e\]\/50 {
+  background-color: hsla(var(--card) / 0.5) !important;
+}
+.bg-\[\#0e142e\]\/30 {
+  background-color: hsla(var(--card) / 0.3) !important;
+}
+.bg-\[\#0e142e\]\/20 {
+  background-color: hsla(var(--card) / 0.2) !important;
+}
+
+/* Input & Highlight Background Mappings */
+.bg-\[\#090d22\] {
+  background-color: hsl(var(--muted)) !important;
+}
+.bg-\[\#090d22\]\/80 {
+  background-color: hsla(var(--muted) / 0.8) !important;
+}
+.bg-\[\#090d22\]\/60 {
+  background-color: hsla(var(--muted) / 0.6) !important;
+}
+.bg-\[\#090d22\]\/50 {
+  background-color: hsla(var(--muted) / 0.5) !important;
+}
+.bg-\[\#090d22\]\/30 {
+  background-color: hsla(var(--muted) / 0.3) !important;
+}
+
+/* Section specific background overrides */
+.bg-\[\#090e22\]\/50 {
+  background-color: hsla(var(--muted) / 0.5) !important;
+}
+
+/* Border Color Mappings */
+.border-white\/5 {
+  border-color: hsl(var(--border)) !important;
+}
+.border-white\/10 {
+  border-color: hsl(var(--border)) !important;
+}
+
+/* Text Color Contrast Mappings */
+.text-slate-100 {
+  color: hsl(var(--foreground)) !important;
+}
+.text-slate-200 {
+  color: hsl(var(--foreground)) !important;
+}
+.text-slate-300 {
+  color: hsl(var(--muted-foreground)) !important;
+}
+.text-slate-400 {
+  color: hsl(var(--muted-foreground)) !important;
+}
+.text-slate-500 {
+  color: hsl(var(--muted-foreground)) !important;
+}
+.text-white {
+  color: hsl(var(--foreground)) !important;
+}
+
+/* Light mode specific fine-tuning */
+:root:not(.dark) {
+  --border: 220 13% 86%;
+  --input: 220 13% 86%;
+  --muted: 220 14% 93%;
+  --muted-foreground: 220 10% 35%;
+  --foreground: 220 25% 10%;
+  --background: 220 20% 98%;
+  
+  /* Make shadows richer in light mode */
+  .shadow-lg {
+    box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.05), 0 8px 10px -6px rgba(0, 0, 0, 0.05) !important;
+  }
+  .shadow-2xl {
+    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.07) !important;
+  }
+}
+
