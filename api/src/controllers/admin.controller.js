@@ -2,6 +2,8 @@ const User = require('../models/User');
 const Supplier = require('../models/Supplier');
 const Order = require('../models/Order');
 const AdminCommission = require('../models/AdminCommission');
+const AuditLog = require('../models/AuditLog');
+const { logAudit } = require('../utils/auditLogger');
 const paginate = require('../utils/pagination');
 
 // @desc    Get dashboard metrics overview
@@ -141,7 +143,29 @@ exports.toggleUserStatus = async (req, res, next) => {
     user.status = status;
     await user.save();
 
+    await logAudit({
+      userId: req.user.id,
+      action: status === 'suspended' ? 'user_suspended' : 'user_activated',
+      entityType: 'User',
+      entityId: user._id,
+      details: { targetUserId: user._id, targetUserName: user.name, status },
+      req
+    });
+
     res.success({ id: user._id, status: user.status, message: `User account successfully ${status}` });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// @desc    Get all audit logs
+// @route   GET /api/v1/admin/logs
+// @access  Private (Admin Only)
+exports.getAuditLogs = async (req, res, next) => {
+  try {
+    const populateOptions = [{ path: 'user', select: 'name email role' }];
+    const paginatedResult = await paginate(AuditLog, {}, req, populateOptions, '', { createdAt: -1 });
+    res.success(paginatedResult);
   } catch (error) {
     next(error);
   }

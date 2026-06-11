@@ -126,7 +126,7 @@ export default function AdminOverview() {
               </Button>
             </Link>
             <Link to="/admin/commission">
-              <Button size="lg" variant="outline" className="rounded-xl border-white/25 text-white hover:bg-white/10 gap-2 font-bold bg-white/5">
+              <Button size="lg" variant="ghost" className="rounded-xl border border-white/20 text-white hover:bg-white/10 hover:text-white gap-2 font-bold bg-white/5 shadow-md">
                 Commission Report
               </Button>
             </Link>

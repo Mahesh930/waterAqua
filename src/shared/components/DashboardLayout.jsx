@@ -7,7 +7,6 @@ import { useGetNotificationsQuery, useMarkNotificationsReadMutation } from "@/st
 import { motion, AnimatePresence } from "framer-motion";
 
 import { useTheme } from "next-themes";
-import { useTranslation } from "react-i18next";
 
 function NotificationPanel({ notifications = [], markAllRead }) {
   useEffect(() => {
@@ -50,7 +49,6 @@ export default function DashboardLayout({ children, navItems, title }) {
   const navigate = useNavigate();
   const { signOut, profile, user } = useAuth();
   const { theme, setTheme } = useTheme();
-  const { i18n } = useTranslation();
   const toggle = () => setTheme(theme === "dark" ? "light" : "dark");
 
   // RTK Query hooks for notifications (with 10 seconds auto-polling)
@@ -108,18 +106,6 @@ export default function DashboardLayout({ children, navItems, title }) {
                 <Moon className="absolute h-4 w-4 rotate-90 scale-0 transition-all dark:rotate-0 dark:scale-100" />
               </Button>
 
-              {/* Language toggle */}
-              <Button 
-                variant="ghost" 
-                size="sm" 
-                onClick={() => {
-                  const currentLang = i18n.language;
-                  i18n.changeLanguage(currentLang === "en" ? "hi" : "en");
-                }}
-                className="h-9 px-2 text-xs font-bold text-slate-300 hover:text-white hover:bg-white/5 rounded-xl"
-              >
-                {i18n.language === "hi" ? "EN" : "हिं"}
-              </Button>
 
               {/* Notification bell */}
               <div className="relative">
@@ -146,11 +132,6 @@ export default function DashboardLayout({ children, navItems, title }) {
                 </AnimatePresence>
               </div>
 
-              {profile?.full_name && (
-                <span className="hidden sm:block text-xs font-semibold text-slate-400 max-w-[100px] truncate bg-[#0f1430] border border-white/5 px-3 py-1.5 rounded-lg">
-                  {profile.full_name}
-                </span>
-              )}
               
               <Button 
                 variant="ghost" 

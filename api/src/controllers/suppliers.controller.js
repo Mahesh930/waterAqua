@@ -206,6 +206,16 @@ exports.updateMyProfile = async (req, res, next) => {
       });
     }
 
+    const { logAudit } = require('../utils/auditLogger');
+    await logAudit({
+      userId: req.user.id,
+      action: 'supplier_profile_updated',
+      entityType: 'Supplier',
+      entityId: supplier._id,
+      details: { updatedFields: Object.keys(fieldsToUpdate) },
+      req
+    });
+
     res.success(supplier);
   } catch (error) {
     next(error);

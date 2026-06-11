@@ -13,9 +13,12 @@ const item = { hidden: { opacity: 0, y: 15 }, show: { opacity: 1, y: 0 } };
 export default function AdminUsers() {
   const { toast } = useToast();
   const [search, setSearch] = useState("");
+  const [selectedRole, setSelectedRole] = useState("all");
 
   // RTK queries & mutations
-  const { data: users = [], isLoading: usersLoading } = useGetAdminUsersQuery({ role: "customer" });
+  const { data: users = [], isLoading: usersLoading } = useGetAdminUsersQuery(
+    selectedRole === "all" ? undefined : { role: selectedRole }
+  );
   const { data: orders = [], isLoading: ordersLoading } = useGetOrdersQuery();
   const [toggleUserStatus] = useToggleUserStatusMutation();
 
@@ -26,7 +29,7 @@ export default function AdminUsers() {
     try {
       await toggleUserStatus({ id: userRecord.id || userRecord._id, status: nextStatus }).unwrap();
       toast({ 
-        title: `Customer ${nextStatus === "suspended" ? "suspended 🚫" : "activated ✅"}`, 
+        title: `User ${nextStatus === "suspended" ? "suspended 🚫" : "activated ✅"}`, 
         description: `${userRecord.name || "User"}'s account status has been updated.` 
       });
     } catch (error) {
@@ -38,18 +41,30 @@ export default function AdminUsers() {
     }
   };
 
-  const filteredCustomers = users.filter(u => 
+  const filteredUsers = users.filter(u => 
     !search || 
     u.name?.toLowerCase().includes(search.toLowerCase()) || 
     u.phone?.includes(search) || 
     u.email?.toLowerCase().includes(search.toLowerCase())
   );
 
+  const roleBadgeStyles = {
+    customer: "bg-blue-500/10 text-blue-400 border-blue-500/10 hover:bg-blue-500/20",
+    supplier: "bg-violet-500/10 text-violet-400 border-violet-500/10 hover:bg-violet-500/20",
+    admin: "bg-amber-500/10 text-amber-400 border-amber-500/10 hover:bg-amber-500/20",
+  };
+
+  const roleLabel = {
+    customer: "Customer",
+    supplier: "Supplier",
+    admin: "Admin",
+  };
+
   if (isLoading) {
     return (
       <div className="flex flex-col items-center justify-center py-20 gap-3">
         <div className="animate-spin h-10 w-10 border-4 border-blue-500 border-t-transparent rounded-full" />
-        <p className="text-sm text-slate-400 font-semibold">Filtering customers registry...</p>
+        <p className="text-sm text-slate-400 font-semibold">Filtering users registry...</p>
       </div>
     );
   }
@@ -59,35 +74,58 @@ export default function AdminUsers() {
       {/* Header */}
       <motion.div variants={item} className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-3">
         <div>
-          <h2 className="text-2xl sm:text-3xl font-bold text-white tracking-tight">Customer Management</h2>
-          <p className="text-slate-400 text-sm mt-0.5">{filteredCustomers.length} registered customers</p>
+          <h2 className="text-2xl sm:text-3xl font-bold text-white tracking-tight">User Management</h2>
+          <p className="text-slate-400 text-sm mt-0.5">{filteredUsers.length} registered users found</p>
         </div>
+      </motion.div>
+
+      {/* Role Tabs */}
+      <motion.div variants={item} className="flex gap-1.5 overflow-x-auto pb-1.5 scrollbar-thin">
+        {[
+          { key: "all", label: "All Users" },
+          { key: "customer", label: "Customers" },
+          { key: "supplier", label: "Suppliers" },
+          { key: "admin", label: "Admins" },
+        ].map(tab => (
+          <button 
+            key={tab.key} 
+            onClick={() => { setSelectedRole(tab.key); setSearch(""); }}
+            className={`flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-semibold whitespace-nowrap transition-all ${
+              selectedRole === tab.key 
+                ? "bg-blue-600 text-white shadow-md shadow-blue-600/10" 
+                : "bg-[#0e142e] border border-white/5 text-slate-400 hover:text-white"
+            }`}
+          >
+            {tab.label}
+          </button>
+        ))}
       </motion.div>
 
       {/* Search */}
       <motion.div variants={item} className="relative">
         <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-500" />
         <Input 
-          placeholder="Search by customer name, phone number, or email..." 
+          placeholder={`Search by name, phone number, or email in ${selectedRole === "all" ? "all users" : selectedRole + "s"}...`} 
           value={search} 
           onChange={e => setSearch(e.target.value)}
           className="pl-10 rounded-xl bg-[#0e142e]/60 border-white/5 text-white placeholder-slate-600 focus-visible:ring-blue-500" 
         />
       </motion.div>
 
-      {/* Customers List */}
+      {/* Users List */}
       <div className="space-y-2.5">
-        {filteredCustomers.length === 0 ? (
+        {filteredUsers.length === 0 ? (
           <div className="text-center py-16 bg-[#0e142e]/30 border border-white/5 rounded-3xl shadow-lg">
             <Users className="h-12 w-12 mx-auto text-slate-600 mb-2.5" />
-            <p className="text-sm text-slate-500 font-semibold">No customers found</p>
+            <p className="text-sm text-slate-500 font-semibold">No users found</p>
           </div>
         ) : (
-          filteredCustomers.map((c) => {
+          filteredUsers.map((c) => {
             const customerId = c.id || c._id;
             const customerOrders = orders.filter(o => {
               const oCustId = o.customer?._id || o.customer;
-              return oCustId === customerId;
+              const oSuppId = o.supplier?._id || o.supplier;
+              return oCustId === customerId || oSuppId === customerId;
             });
             const spent = customerOrders
               .filter(o => o.status === "delivered")
@@ -118,14 +156,14 @@ export default function AdminUsers() {
                       <span className="text-slate-600">·</span>
                       <span className="flex items-center gap-1"><Award className="h-3 w-3 text-slate-500" /> {customerOrders.length} orders</span>
                       <span className="text-slate-600">·</span>
-                      <span className="text-emerald-400 font-bold">Spent: ₹{spent.toLocaleString()}</span>
+                      <span className="text-emerald-400 font-bold">{c.role === 'supplier' ? 'Revenue' : 'Spent'}: ₹{spent.toLocaleString()}</span>
                     </div>
                   </div>
                 </div>
                 
                 <div className="flex items-center gap-2 shrink-0 self-end sm:self-center">
-                  <Badge className="rounded-lg bg-blue-500/10 text-blue-400 border border-blue-500/10 text-[10px] font-bold py-1 px-2.5">
-                    Customer
+                  <Badge className={`rounded-lg border text-[10px] font-bold py-1 px-2.5 ${roleBadgeStyles[c.role] || roleBadgeStyles.customer}`}>
+                    {roleLabel[c.role] || "User"}
                   </Badge>
                   <Button
                     size="sm"

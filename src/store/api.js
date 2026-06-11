@@ -51,6 +51,22 @@ export const api = createApi({
       transformResponse: (response) => response.data.user,
       invalidatesTags: ['User'],
     }),
+    forgotPassword: builder.mutation({
+      query: (body) => ({
+        url: '/auth/forgot-password',
+        method: 'POST',
+        body,
+      }),
+      transformResponse: (response) => response.data || response,
+    }),
+    resetPassword: builder.mutation({
+      query: ({ token, password }) => ({
+        url: `/auth/reset-password/${token}`,
+        method: 'POST',
+        body: { password },
+      }),
+      transformResponse: (response) => response.data || response,
+    }),
 
     // SUPPLIER ENDPOINTS
     getSuppliers: builder.query({
@@ -58,7 +74,7 @@ export const api = createApi({
         url: '/suppliers',
         params: params || undefined,
       }),
-      transformResponse: (response) => response.data,
+      transformResponse: (response) => response.data?.results || response.data,
       providesTags: ['Supplier'],
     }),
     getSupplierById: builder.query({
@@ -82,7 +98,7 @@ export const api = createApi({
     }),
     getSupplierFeedback: builder.query({
       query: (id) => `/suppliers/${id}/feedback`,
-      transformResponse: (response) => response.data,
+      transformResponse: (response) => response.data?.results || response.data,
       providesTags: ['Feedback'],
     }),
     submitFeedback: builder.mutation({
@@ -111,7 +127,7 @@ export const api = createApi({
           params: cleanParams,
         };
       },
-      transformResponse: (response) => response.data,
+      transformResponse: (response) => response.data?.results || response.data,
       providesTags: ['Product'],
     }),
     getProductById: builder.query({
@@ -190,7 +206,7 @@ export const api = createApi({
     // ORDER ENDPOINTS
     getOrders: builder.query({
       query: () => '/orders',
-      transformResponse: (response) => response.data,
+      transformResponse: (response) => response.data?.results || response.data,
       providesTags: ['Order'],
     }),
     getOrderById: builder.query({
@@ -246,7 +262,7 @@ export const api = createApi({
     // NOTIFICATION ENDPOINTS
     getNotifications: builder.query({
       query: () => '/notifications',
-      transformResponse: (response) => response.data,
+      transformResponse: (response) => response.data?.results || response.data,
       providesTags: ['Notification'],
     }),
     markNotificationsRead: builder.mutation({
@@ -269,17 +285,25 @@ export const api = createApi({
         url: '/admin/users',
         params: params || undefined,
       }),
-      transformResponse: (response) => response.data,
+      transformResponse: (response) => response.data?.results || response.data,
       providesTags: ['User'],
     }),
     getAdminSuppliers: builder.query({
       query: () => '/admin/suppliers',
-      transformResponse: (response) => response.data,
+      transformResponse: (response) => response.data?.results || response.data,
       providesTags: ['Supplier'],
     }),
     getAdminCommissions: builder.query({
       query: () => '/admin/commissions',
-      transformResponse: (response) => response.data,
+      transformResponse: (response) => response.data?.results || response.data,
+      providesTags: ['Admin'],
+    }),
+    getAdminLogs: builder.query({
+      query: (params) => ({
+        url: '/admin/logs',
+        params: params || undefined,
+      }),
+      transformResponse: (response) => response.data?.results || response.data,
       providesTags: ['Admin'],
     }),
     toggleUserStatus: builder.mutation({
@@ -297,6 +321,8 @@ export const api = createApi({
 export const {
   useLoginMutation,
   useRegisterMutation,
+  useForgotPasswordMutation,
+  useResetPasswordMutation,
   useGetMeQuery,
   useUpdateProfileMutation,
   useGetSuppliersQuery,
@@ -328,5 +354,6 @@ export const {
   useGetAdminUsersQuery,
   useGetAdminSuppliersQuery,
   useGetAdminCommissionsQuery,
+  useGetAdminLogsQuery,
   useToggleUserStatusMutation,
 } = api;

@@ -45,6 +45,7 @@ export default function Index() {
           <div className="hidden md:flex items-center gap-8">
             <a href="#features" className="text-sm font-medium text-slate-400 hover:text-white transition-colors">Features</a>
             <a href="#how-it-works" className="text-sm font-medium text-slate-400 hover:text-white transition-colors">How It Works</a>
+            <Link to="/contact" className="text-sm font-medium text-slate-400 hover:text-white transition-colors">Contact Us</Link>
             <Link to="/login">
               <Button variant="ghost" className="text-slate-300 hover:text-white hover:bg-white/5 rounded-xl">Log In</Button>
             </Link>
@@ -207,7 +208,11 @@ export default function Index() {
             </div>
             <span className="font-bold text-lg tracking-wide text-white">AquaHome</span>
           </div>
-          <p className="text-sm text-slate-500 font-medium">© 2026 AquaHome Water Delivery Network. Crafted with premium details.</p>
+          <div className="flex items-center gap-6 text-sm text-slate-500 font-medium">
+            <Link to="/contact" className="hover:text-white transition-colors">Contact Us</Link>
+            <span>·</span>
+            <span>© 2026 AquaHome Water Delivery Network. Crafted with premium details.</span>
+          </div>
         </div>
       </footer>
     </div>

@@ -106,6 +106,16 @@ exports.createProduct = async (req, res, next) => {
       stock: stock !== undefined ? stock : 999
     });
 
+    const { logAudit } = require('../utils/auditLogger');
+    await logAudit({
+      userId: req.user.id,
+      action: 'product_created',
+      entityType: 'Product',
+      entityId: product._id,
+      details: { name: product.name, price: product.price },
+      req
+    });
+
     res.success(product, 201);
   } catch (error) {
     next(error);
@@ -154,6 +164,16 @@ exports.updateProduct = async (req, res, next) => {
       { new: true, runValidators: true }
     );
 
+    const { logAudit } = require('../utils/auditLogger');
+    await logAudit({
+      userId: req.user.id,
+      action: 'product_updated',
+      entityType: 'Product',
+      entityId: product._id,
+      details: { name: product.name, updatedFields: Object.keys(fieldsToUpdate) },
+      req
+    });
+
     res.success(product);
   } catch (error) {
     next(error);
@@ -187,6 +207,16 @@ exports.deleteProduct = async (req, res, next) => {
     // Soft delete by setting isActive to false
     product.isActive = false;
     await product.save();
+
+    const { logAudit } = require('../utils/auditLogger');
+    await logAudit({
+      userId: req.user.id,
+      action: 'product_deleted',
+      entityType: 'Product',
+      entityId: product._id,
+      details: { name: product.name },
+      req
+    });
 
     res.success({ id: product._id, message: 'Product successfully removed from active catalog' });
   } catch (error) {

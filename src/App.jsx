@@ -11,6 +11,7 @@ import Register from "@/features/auth/pages/Register";
 const CustomerDashboard = React.lazy(() => import("@/features/customer/pages/CustomerDashboard"));
 const SupplierDashboard = React.lazy(() => import("@/features/supplier/pages/SupplierDashboard"));
 const AdminDashboard = React.lazy(() => import("@/features/admin/pages/AdminDashboard"));
+const ContactUs = React.lazy(() => import("./pages/ContactUs"));
 const NotFound = React.lazy(() => import("./pages/NotFound"));
 
 const LoadingFallback = () => (
@@ -31,6 +32,7 @@ const App = () => (
             <Route path="/" element={<Index />} />
             <Route path="/login" element={<Login />} />
             <Route path="/register" element={<Register />} />
+            <Route path="/contact" element={<ContactUs />} />
             <Route path="/customer/*" element={
               <ProtectedRoute allowedRoles={["customer"]}>
                 <CustomerDashboard />

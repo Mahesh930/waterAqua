@@ -5,7 +5,8 @@ const {
   getUsers,
   getSuppliers,
   getCommissions,
-  toggleUserStatus
+  toggleUserStatus,
+  getAuditLogs
 } = require('../controllers/admin.controller');
 const { protect, restrictTo } = require('../middleware/auth.middleware');
 
@@ -17,6 +18,7 @@ router.get('/overview', getOverview);
 router.get('/users', getUsers);
 router.get('/suppliers', getSuppliers);
 router.get('/commissions', getCommissions);
+router.get('/logs', getAuditLogs);
 router.patch('/users/:id/status', toggleUserStatus);
 
 module.exports = router;

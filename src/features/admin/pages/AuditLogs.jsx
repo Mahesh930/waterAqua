@@ -1,7 +1,7 @@
 import React, { useState } from "react";
-import { useGetOrdersQuery, useGetAdminCommissionsQuery } from "@/store/api";
+import { useGetAdminLogsQuery } from "@/store/api";
 import { motion } from "framer-motion";
-import { Search, ChevronLeft, ChevronRight, Eye, Package, Clock, Shield } from "lucide-react";
+import { Search, ChevronLeft, ChevronRight, Eye, Clock, Shield } from "lucide-react";
 import { Input } from "@/ui/input";
 import { Button } from "@/ui/button";
 
@@ -9,12 +9,65 @@ const container = { hidden: {}, show: { transition: { staggerChildren: 0.04 } } 
 const item = { hidden: { opacity: 0, y: 15 }, show: { opacity: 1, y: 0 } };
 
 const actionColors = {
+  "user_registered": "bg-blue-500/10 text-blue-400 border-blue-500/10",
+  "user_logged_in": "bg-sky-500/10 text-sky-400 border-sky-500/10",
+  "user_profile_updated": "bg-violet-500/10 text-violet-400 border-violet-500/10",
+  "password_reset_requested": "bg-rose-500/10 text-rose-400 border-rose-500/10",
+  "password_reset_completed": "bg-emerald-500/10 text-emerald-400 border-emerald-500/10",
+  "user_suspended": "bg-red-500/10 text-red-400 border-red-500/10",
+  "user_activated": "bg-emerald-500/10 text-emerald-400 border-emerald-500/10",
+  "supplier_profile_updated": "bg-purple-500/10 text-purple-400 border-purple-500/10",
+  "product_created": "bg-emerald-500/10 text-emerald-400 border-emerald-500/10",
+  "product_updated": "bg-violet-500/10 text-violet-400 border-violet-500/10",
+  "product_deleted": "bg-rose-500/10 text-rose-400 border-rose-500/10",
   "order_placed": "bg-blue-500/10 text-blue-400 border-blue-500/10",
-  "order_confirmed": "bg-indigo-500/10 text-indigo-400 border-indigo-500/10",
-  "order_dispatched": "bg-purple-500/10 text-purple-400 border-purple-500/10",
-  "order_delivered": "bg-emerald-500/10 text-emerald-400 border-emerald-500/10",
-  "commission_logged": "bg-amber-500/10 text-amber-400 border-amber-500/10",
-  "user_login": "bg-slate-500/10 text-slate-400 border-slate-500/10",
+  "order_status_updated": "bg-indigo-500/10 text-indigo-400 border-indigo-500/10",
+  "order_otp_verified": "bg-teal-500/10 text-teal-400 border-teal-500/10",
+  "order_cancelled_by_customer": "bg-rose-500/10 text-rose-400 border-rose-500/10",
+  "feedback_submitted": "bg-amber-500/10 text-amber-400 border-amber-500/10"
+};
+
+const getLogMessage = (log) => {
+  const userName = log.user?.name || "System";
+  const userRole = log.user?.role || "";
+  const roleStr = userRole ? ` (${userRole})` : "";
+  
+  switch (log.action) {
+    case "user_registered":
+      return `New user "${userName}"${roleStr} registered with email ${log.details?.email || ""}.`;
+    case "user_logged_in":
+      return `User "${userName}"${roleStr} logged in successfully.`;
+    case "user_profile_updated":
+      return `User "${userName}"${roleStr} updated profile fields: ${log.details?.updatedFields?.join(", ") || "N/A"}.`;
+    case "password_reset_requested":
+      return `Password reset requested for email ${log.details?.email || ""}.`;
+    case "password_reset_completed":
+      return `Password reset completed for user "${userName}".`;
+    case "user_suspended":
+      return `Admin suspended user account "${log.details?.targetUserName || "User"}" (${log.details?.targetUserId || ""}).`;
+    case "user_activated":
+      return `Admin activated user account "${log.details?.targetUserName || "User"}" (${log.details?.targetUserId || ""}).`;
+    case "supplier_profile_updated":
+      return `Supplier "${userName}" updated business profile fields: ${log.details?.updatedFields?.join(", ") || "N/A"}.`;
+    case "product_created":
+      return `Supplier "${userName}" added product "${log.details?.name || "Product"}" to catalog for ₹${log.details?.price || 0}.`;
+    case "product_updated":
+      return `Supplier "${userName}" updated product "${log.details?.name || "Product"}" fields: ${log.details?.updatedFields?.join(", ") || "N/A"}.`;
+    case "product_deleted":
+      return `Supplier "${userName}" soft-deleted product "${log.details?.name || "Product"}" from catalog.`;
+    case "order_placed":
+      return `Customer "${userName}" placed order #${log.entityId?.toString().slice(-8).toUpperCase()} (₹${log.details?.totalAmount || 0}) with supplier ${log.details?.supplierId || ""}.`;
+    case "order_status_updated":
+      return `Order #${log.entityId?.toString().slice(-8).toUpperCase()} status updated to "${log.details?.status || ""}" by "${userName}".`;
+    case "order_otp_verified":
+      return `Order #${log.entityId?.toString().slice(-8).toUpperCase()} delivered and OTP verified. Payment: ${log.details?.paymentMethod?.toUpperCase() || "COD"}.`;
+    case "order_cancelled_by_customer":
+      return `Order #${log.entityId?.toString().slice(-8).toUpperCase()} was cancelled by customer "${userName}".`;
+    case "feedback_submitted":
+      return `Customer "${userName}" submitted rating ${log.details?.rating || 0}★ feedback for order #${log.entityId?.toString().slice(-8).toUpperCase()}.`;
+    default:
+      return log.details?.message || `Performed action "${log.action}" on entity ${log.entityType}.`;
+  }
 };
 
 export default function AdminAuditLogs() {
@@ -23,71 +76,41 @@ export default function AdminAuditLogs() {
   const [filterAction, setFilterAction] = useState("all");
   const itemsPerPage = 15;
 
-  // RTK Queries
-  const { data: orders = [], isLoading: ordersLoading } = useGetOrdersQuery();
-  const { data: commissions = [], isLoading: commissionsLoading } = useGetAdminCommissionsQuery();
+  // RTK Query to get 100 recent audit logs from DB
+  const { data: logs = [], isLoading } = useGetAdminLogsQuery({ limit: 100 });
 
-  const isLoading = ordersLoading || commissionsLoading;
+  const accountActions = [
+    "user_registered", "user_logged_in", "user_profile_updated",
+    "password_reset_requested", "password_reset_completed",
+    "user_suspended", "user_activated", "supplier_profile_updated"
+  ];
+  
+  const orderActions = [
+    "order_placed", "order_status_updated", "order_otp_verified",
+    "order_cancelled_by_customer"
+  ];
 
-  // Simulate audit logs dynamically from active database state to keep it 100% functional
-  const logs = [];
+  const productActions = [
+    "product_created", "product_updated", "product_deleted"
+  ];
 
-  orders.forEach(o => {
-    const oId = o._id || o.id;
-    const oDate = o.createdAt || o.created_at;
-    const sName = o.supplier?.name || "Distributor";
-    
-    // Placed log
-    logs.push({
-      id: `${oId}-placed`,
-      action: "order_placed",
-      entity_type: "Order",
-      entity_id: oId,
-      created_at: oDate,
-      ip_address: "192.168.1.51",
-      details: { message: `Customer placed order #${oId.slice(-8).toUpperCase()} with ${sName}` }
-    });
-
-    // Delivered log
-    if (o.status === "delivered") {
-      logs.push({
-        id: `${oId}-delivered`,
-        action: "order_delivered",
-        entity_type: "Order",
-        entity_id: oId,
-        created_at: oDate,
-        ip_address: "192.168.1.53",
-        details: { message: `Order #${oId.slice(-8).toUpperCase()} was marked DELIVERED and OTP verified.` }
-      });
-    }
-  });
-
-  commissions.forEach(c => {
-    const cId = c._id || c.id;
-    const cDate = c.createdAt || c.created_at;
-    logs.push({
-      id: `${cId}-comm`,
-      action: "commission_logged",
-      entity_type: "Commission",
-      entity_id: cId,
-      created_at: cDate,
-      ip_address: "127.0.0.1",
-      details: { message: `Platform earned ₹${Number(c.commissionAmount || c.commission_amount || 0).toFixed(0)} commission on order.` }
-    });
-  });
-
-  // Sort logs by date descending
-  logs.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
-
+  // Filter logs based on tabs and search term
   const filtered = logs
-    .filter(l => filterAction === "all" || l.action === filterAction)
+    .filter(l => {
+      if (filterAction === "all") return true;
+      if (filterAction === "accounts") return accountActions.includes(l.action);
+      if (filterAction === "orders") return orderActions.includes(l.action);
+      if (filterAction === "products") return productActions.includes(l.action);
+      return true;
+    })
     .filter(l => {
       const term = search.toLowerCase();
       const matchAction = l.action.toLowerCase().includes(term);
-      const matchId = l.entity_id?.toString().includes(search);
-      const matchType = l.entity_type.toLowerCase().includes(term);
-      const matchMsg = l.details?.message?.toLowerCase().includes(term);
-      return !search || matchAction || matchId || matchType || matchMsg;
+      const matchId = l.entityId?.toString().includes(search);
+      const matchType = l.entityType.toLowerCase().includes(term);
+      const matchMsg = getLogMessage(l).toLowerCase().includes(term);
+      const matchUser = l.user?.name?.toLowerCase().includes(term);
+      return !search || matchAction || matchId || matchType || matchMsg || matchUser;
     });
 
   const totalPages = Math.ceil(filtered.length / itemsPerPage);
@@ -101,9 +124,9 @@ export default function AdminAuditLogs() {
 
   const actionCounts = {
     "all": logs.length,
-    "order_placed": logs.filter(l => l.action === "order_placed").length,
-    "order_delivered": logs.filter(l => l.action === "order_delivered").length,
-    "commission_logged": logs.filter(l => l.action === "commission_logged").length,
+    "accounts": logs.filter(l => accountActions.includes(l.action)).length,
+    "orders": logs.filter(l => orderActions.includes(l.action)).length,
+    "products": logs.filter(l => productActions.includes(l.action)).length,
   };
 
   return (
@@ -111,7 +134,7 @@ export default function AdminAuditLogs() {
       <motion.div variants={item} className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-3">
         <div>
           <h2 className="text-2xl sm:text-3xl font-bold text-white tracking-tight">Audit Logs</h2>
-          <p className="text-slate-400 text-sm mt-0.5">Complete activity history and system events</p>
+          <p className="text-slate-400 text-sm mt-0.5">Complete database activity history and system events</p>
         </div>
       </motion.div>
 
@@ -119,7 +142,7 @@ export default function AdminAuditLogs() {
       <motion.div variants={item} className="relative">
         <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-500" />
         <Input 
-          placeholder="Search by action, order ID, or entity type..." 
+          placeholder="Search logs by keyword, user, action or ID..." 
           value={search} 
           onChange={e => setSearch(e.target.value)}
           className="pl-10 rounded-xl h-11 bg-[#0e142e]/60 border-white/5 text-white placeholder-slate-600 focus-visible:ring-blue-500" 
@@ -130,9 +153,9 @@ export default function AdminAuditLogs() {
       <motion.div variants={item} className="flex gap-1.5 overflow-x-auto pb-1.5 scrollbar-thin">
         {[
           { key: "all", label: "All Events" },
-          { key: "order_placed", label: "Orders Placed" },
-          { key: "order_delivered", label: "Deliveries" },
-          { key: "commission_logged", label: "Commissions" },
+          { key: "accounts", label: "Accounts" },
+          { key: "orders", label: "Orders" },
+          { key: "products", label: "Products" },
         ].map(tab => (
           <button 
             key={tab.key} 
@@ -198,7 +221,7 @@ export default function AdminAuditLogs() {
           <div className="space-y-2.5">
             {paginatedLogs.map(log => (
               <motion.div 
-                key={log.id} 
+                key={log._id || log.id} 
                 variants={item}
                 className="bg-[#0e142e]/60 border border-white/5 rounded-2xl p-4 hover:shadow-lg transition-shadow shadow-md"
               >
@@ -211,23 +234,23 @@ export default function AdminAuditLogs() {
                         {log.action.split("_").map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(" ")}
                       </span>
                       <span className="text-[10px] text-slate-400 bg-white/5 px-2 py-0.5 rounded-md border border-white/5 font-bold uppercase tracking-wider">
-                        {log.entity_type}
+                        {log.entityType}
                       </span>
-                      {log.entity_id && (
+                      {log.entityId && (
                         <span className="text-xs text-slate-500 font-semibold truncate">
-                          #{log.entity_id.toString().slice(-8).toUpperCase()}
+                          #{log.entityId.toString().slice(-8).toUpperCase()}
                         </span>
                       )}
                     </div>
-                    {log.details?.message && (
-                      <div className="text-sm text-slate-300 font-semibold mb-2">
-                        {log.details.message}
-                      </div>
-                    )}
+                    
+                    <div className="text-sm text-slate-300 font-semibold mb-2">
+                      {getLogMessage(log)}
+                    </div>
+                    
                     <div className="flex items-center gap-3 text-xs text-slate-500 font-semibold">
                       <span className="flex items-center gap-1">
                         <Clock className="h-3.5 w-3.5 text-slate-600" />
-                        {new Date(log.created_at).toLocaleString("en-IN", {
+                        {new Date(log.createdAt).toLocaleString("en-IN", {
                           day: "numeric",
                           month: "short",
                           year: "numeric",
@@ -235,10 +258,10 @@ export default function AdminAuditLogs() {
                           minute: "2-digit"
                         })}
                       </span>
-                      {log.ip_address && (
+                      {log.ipAddress && (
                         <>
                           <span className="text-slate-700">·</span>
-                          <span>IP: {log.ip_address}</span>
+                          <span>IP: {log.ipAddress}</span>
                         </>
                       )}
                     </div>

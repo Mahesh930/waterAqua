@@ -211,31 +211,36 @@
 }
 
 /* Border Color Mappings */
-.border-white\/5 {
-  border-color: hsl(var(--border)) !important;
-}
-.border-white\/10 {
+.border-white\/5,
+.border-white\/10,
+.border-white\/15,
+.border-white\/20,
+.border-white\/25 {
   border-color: hsl(var(--border)) !important;
 }
 
-/* Text Color Contrast Mappings */
-.text-slate-100 {
-  color: hsl(var(--foreground)) !important;
+/* Additional Background Color Mappings */
+.bg-\[\#0a0f24\] {
+  background-color: hsl(var(--background)) !important;
 }
+.bg-\[\#060818\] {
+  background-color: hsl(var(--background)) !important;
+}
+.bg-\[\#0d1127\] {
+  background-color: hsl(var(--card)) !important;
+}
+
+/* Text Color Contrast Mappings */
+.text-slate-100,
 .text-slate-200 {
   color: hsl(var(--foreground)) !important;
 }
-.text-slate-300 {
+.text-slate-300,
+.text-slate-400,
+.text-slate-500,
+.text-slate-600,
+.text-slate-700 {
   color: hsl(var(--muted-foreground)) !important;
-}
-.text-slate-400 {
-  color: hsl(var(--muted-foreground)) !important;
-}
-.text-slate-500 {
-  color: hsl(var(--muted-foreground)) !important;
-}
-.text-white {
-  color: hsl(var(--foreground)) !important;
 }
 
 /* Light mode specific fine-tuning */
@@ -253,6 +258,81 @@
   }
   .shadow-2xl {
     box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.07) !important;
+  }
+
+  /* Force solid cards in light mode instead of transparent white to avoid blending with background */
+  .bg-\[\#0e142e\]\/80,
+  .bg-\[\#0e142e\]\/60,
+  .bg-\[\#0e142e\]\/50,
+  .bg-\[\#0e142e\]\/30,
+  .bg-\[\#0e142e\]\/20,
+  .bg-\[\#0e142e\] {
+    background-color: hsl(var(--card)) !important;
+  }
+
+  /* Force solid inputs in light mode */
+  .bg-\[\#090d22\],
+  .bg-\[\#090d22\]\/80,
+  .bg-\[\#090d22\]\/60,
+  .bg-\[\#090d22\]\/50,
+  .bg-\[\#090d22\]\/30 {
+    background-color: hsl(var(--muted)) !important;
+  }
+
+  /* Map transparent white backgrounds to muted gray in light mode */
+  .bg-white\/5,
+  .bg-white\/10 {
+    background-color: hsl(var(--muted)) !important;
+  }
+  .hover\:bg-white\/5:hover,
+  .hover\:bg-white\/10:hover {
+    background-color: hsl(var(--muted)) !important;
+  }
+
+  /* Map logo gradient text under light mode to theme gradient */
+  .from-white.to-blue-200,
+  .from-white.via-slate-100.to-blue-200 {
+    background-image: linear-gradient(to right, hsl(var(--primary)), hsl(var(--accent))) !important;
+  }
+
+  /* High contrast equivalents for status colors and icons in light mode */
+  .text-blue-400 { color: #1d4ed8 !important; }
+  .text-emerald-400 { color: #047857 !important; }
+  .text-amber-400 { color: #b45309 !important; }
+  .text-violet-400 { color: #6d28d9 !important; }
+  .text-indigo-400 { color: #4338ca !important; }
+  .text-rose-400 { color: #be123c !important; }
+  .text-teal-400 { color: #0f766e !important; }
+
+  /* Map white text to foreground globally except when on colored backgrounds */
+  .text-white {
+    color: hsl(var(--foreground)) !important;
+  }
+  /* Restore pure white text for buttons, badges, gradients, and specific colored containers */
+  button.text-white,
+  a.text-white,
+  .text-white-force,
+  [class*="bg-blue"].text-white,
+  [class*="bg-indigo"].text-white,
+  [class*="bg-emerald"].text-white,
+  [class*="bg-red"].text-white,
+  [class*="bg-rose"].text-white,
+  [class*="bg-teal"].text-white,
+  [class*="bg-amber"].text-white,
+  [class*="bg-gradient"].text-white,
+  [class*="bg-primary"].text-white,
+  .bg-red-500 .text-white,
+  .bg-blue-600 .text-white,
+  button .text-white {
+    color: #ffffff !important;
+  }
+
+  /* Adjust transparent text opacities in light mode for proper contrast */
+  .text-white\/80 {
+    color: hsla(var(--foreground) / 0.8) !important;
+  }
+  .text-white\/60 {
+    color: hsla(var(--foreground) / 0.6) !important;
   }
 }
 
