@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import { useGetOrdersQuery, useUpdateOrderStatusMutation } from "@/store/api";
+import { useGetOrdersQuery, useUpdateOrderStatusMutation, useCancelOrderMutation, useSubmitFeedbackMutation } from "@/store/api";
 import { motion, AnimatePresence } from "framer-motion";
 import io from "socket.io-client";
 import {
@@ -17,9 +17,19 @@ import {
   Truck,
   XCircle,
   Zap,
-  KeyRound
+  KeyRound,
+  Star
 } from "lucide-react";
 import { Button } from "@/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/ui/dialog";
+import { Textarea } from "@/ui/textarea";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -81,7 +91,34 @@ export default function TrackOrder() {
     pollingInterval: 15000 // Fallback query polling
   });
   
-  const [cancelOrderMutation] = useUpdateOrderStatusMutation();
+  const [cancelOrderMutation] = useCancelOrderMutation();
+  const [submitFeedback] = useSubmitFeedbackMutation();
+
+  // Feedback states
+  const [feedbackOrderId, setFeedbackOrderId] = useState(null);
+  const [rating, setRating] = useState(5);
+  const [comment, setComment] = useState("");
+
+  const handleFeedbackSubmit = async (e) => {
+    e.preventDefault();
+    if (!feedbackOrderId) return;
+    try {
+      await submitFeedback({ orderId: feedbackOrderId, rating, comment }).unwrap();
+      toast({
+        title: "Review Submitted",
+        description: "Thank you for rating your delivery supplier!"
+      });
+      setFeedbackOrderId(null);
+      setRating(5);
+      setComment("");
+    } catch (e) {
+      toast({
+        title: "Submission failed",
+        description: e?.data?.error || "Error submitting review",
+        variant: "destructive"
+      });
+    }
+  };
 
   const activeOrders = orders.filter(o => o.status !== "delivered" && o.status !== "cancelled");
   const allOrders = orders;
@@ -127,7 +164,7 @@ export default function TrackOrder() {
 
   const cancelOrder = async (orderId) => {
     try {
-      await cancelOrderMutation({ id: orderId, status: "cancelled" }).unwrap();
+      await cancelOrderMutation(orderId).unwrap();
       toast({ 
         title: "Order Cancelled", 
         description: "Your order has been cancelled successfully." 
@@ -239,6 +276,68 @@ export default function TrackOrder() {
           )}
         </>
       )}
+
+      {/* Feedback Dialog */}
+      <Dialog open={feedbackOrderId !== null} onOpenChange={(open) => !open && setFeedbackOrderId(null)}>
+        <DialogContent className="bg-[#0e142e] border border-white/5 text-slate-200 rounded-3xl max-w-md">
+          <form onSubmit={handleFeedbackSubmit} className="space-y-5">
+            <DialogHeader>
+              <DialogTitle className="text-white text-xl font-bold">Rate Your Supplier</DialogTitle>
+              <DialogDescription className="text-slate-400 mt-1">
+                Your feedback helps suppliers improve their water delivery quality.
+              </DialogDescription>
+            </DialogHeader>
+
+            <div className="flex flex-col items-center justify-center py-3 space-y-2">
+              <div className="flex items-center gap-1.5">
+                {[1, 2, 3, 4, 5].map((star) => (
+                  <button
+                    key={star}
+                    type="button"
+                    onClick={() => setRating(star)}
+                    className="p-1 hover:scale-110 transition-transform duration-100"
+                  >
+                    <Star
+                      size={36}
+                      className={star <= rating ? "fill-amber-400 text-amber-400" : "text-slate-600"}
+                    />
+                  </button>
+                ))}
+              </div>
+              <span className="text-xs font-semibold text-amber-400">
+                {rating === 5 ? "Excellent Hydration!" : rating === 4 ? "Great Service" : rating === 3 ? "Good" : rating === 2 ? "Below Average" : "Poor Service"}
+              </span>
+            </div>
+
+            <div className="space-y-2">
+              <label className="text-xs font-bold text-slate-400 uppercase tracking-wider">Comment (Optional)</label>
+              <Textarea
+                placeholder="Share your experience with this water jar delivery..."
+                value={comment}
+                onChange={(e) => setComment(e.target.value)}
+                className="bg-[#070b19] border border-white/5 text-white rounded-xl placeholder-slate-600 focus-visible:ring-blue-500 h-24"
+              />
+            </div>
+
+            <DialogFooter className="gap-2">
+              <Button
+                type="button"
+                variant="ghost"
+                onClick={() => setFeedbackOrderId(null)}
+                className="bg-white/5 hover:bg-white/10 text-white rounded-xl"
+              >
+                Cancel
+              </Button>
+              <Button
+                type="submit"
+                className="bg-blue-600 hover:bg-blue-500 text-white font-bold rounded-xl px-6"
+              >
+                Submit Review
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
     </motion.div>
   );
 
@@ -420,10 +519,23 @@ export default function TrackOrder() {
               </div>
               <div className="min-w-0">
                 <p className="font-bold text-white truncate">{order.supplier?.name || "Verified Distributor"}</p>
-                <div className="flex items-center gap-2 text-xs text-slate-400 mt-1">
+                <div className="flex items-center gap-2 text-xs text-slate-400 mt-1 flex-wrap">
                   <span>{order.products?.reduce((s, p) => s + p.quantity, 0) || 1} Jars</span>
                   <span className="text-slate-600">•</span>
-                  <span className="font-bold text-white">₹{order.totalAmount}</span>
+                  <span className="font-bold text-white mr-1">₹{order.totalAmount}</span>
+                  <span className={`px-2 py-0.5 rounded-lg text-[9px] font-extrabold border uppercase tracking-wider ${
+                    order.paymentMethod === 'online'
+                      ? order.paymentStatus === 'paid'
+                        ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20'
+                        : 'bg-amber-500/10 text-amber-400 border-amber-500/20'
+                      : 'bg-slate-500/10 text-slate-400 border-slate-500/20'
+                  }`}>
+                    {order.paymentMethod === 'online'
+                      ? order.paymentStatus === 'paid'
+                        ? '💳 Paid'
+                        : '💳 Pay Pending'
+                      : '💵 COD'}
+                  </span>
                 </div>
               </div>
             </div>
@@ -529,14 +641,24 @@ export default function TrackOrder() {
                 </div>
               </div>
             ) : (
-              <div className="flex items-center gap-3.5 bg-emerald-500/5 border border-emerald-500/10 p-3.5 rounded-2xl shrink-0 my-3">
-                <div className="h-10 w-10 rounded-xl bg-emerald-600/10 border border-emerald-500/10 flex items-center justify-center text-emerald-400">
-                  <CheckCircle2 className="h-5 w-5" />
+              <div className="flex items-center justify-between w-full my-3 gap-4">
+                <div className="flex items-center gap-3.5 bg-emerald-500/5 border border-emerald-500/10 p-3.5 rounded-2xl shrink-0">
+                  <div className="h-10 w-10 rounded-xl bg-emerald-600/10 border border-emerald-500/10 flex items-center justify-center text-emerald-400">
+                    <CheckCircle2 className="h-5 w-5" />
+                  </div>
+                  <div>
+                    <p className="text-[10px] text-slate-500 font-bold uppercase tracking-wider">Status</p>
+                    <p className="text-lg font-black text-emerald-400 tracking-wider mt-0.5">COMPLETED</p>
+                  </div>
                 </div>
-                <div>
-                  <p className="text-[10px] text-slate-500 font-bold uppercase tracking-wider">Status</p>
-                  <p className="text-lg font-black text-emerald-400 tracking-wider mt-0.5">COMPLETED</p>
-                </div>
+                
+                <Button 
+                  onClick={() => setFeedbackOrderId(order.id || order._id)}
+                  size="sm" 
+                  className="rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs h-9 px-4"
+                >
+                  Rate Supplier
+                </Button>
               </div>
             )}
 

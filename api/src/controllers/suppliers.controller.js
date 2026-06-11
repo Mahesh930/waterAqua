@@ -1,6 +1,8 @@
 const Supplier = require('../models/Supplier');
 const User = require('../models/User');
 const Feedback = require('../models/Feedback');
+const Product = require('../models/Product');
+const paginate = require('../utils/pagination');
 
 // @desc    Get all active suppliers
 // @route   GET /api/v1/suppliers
@@ -15,20 +17,28 @@ exports.getSuppliers = async (req, res, next) => {
       query.serviceAreas = pincode;
     }
 
-    let suppliers = await Supplier.find(query).populate({
-      path: 'user',
-      select: 'name email phone avatarUrl address'
-    });
-
-    // If search term is provided, filter by businessName
+    // Database-level search on businessName or User.name
     if (search) {
-      const searchRegex = new RegExp(search, 'i');
-      suppliers = suppliers.filter(
-        (s) => searchRegex.test(s.businessName) || (s.user && searchRegex.test(s.user.name))
-      );
+      const matchingUsers = await User.find({ name: { $regex: search, $options: 'i' } }).select('_id');
+      const matchingUserIds = matchingUsers.map(u => u._id);
+
+      query.$or = [
+        { businessName: { $regex: search, $options: 'i' } },
+        { user: { $in: matchingUserIds } }
+      ];
     }
 
-    res.success(suppliers);
+    const populateOptions = [{
+      path: 'user',
+      select: 'name email phone avatarUrl address'
+    }];
+
+    const paginatedResult = await paginate(Supplier, query, req, populateOptions, '', { createdAt: -1 });
+
+    res.success({
+      results: paginatedResult.results,
+      pagination: paginatedResult.pagination
+    });
   } catch (error) {
     next(error);
   }
@@ -136,10 +146,22 @@ exports.updateMyProfile = async (req, res, next) => {
     if (sAreas) fieldsToUpdate.serviceAreas = sAreas;
 
     const pCan = pricePerCan !== undefined ? pricePerCan : price_per_can;
-    if (pCan !== undefined) fieldsToUpdate.pricePerCan = pCan;
+    if (pCan !== undefined) {
+      fieldsToUpdate.pricePerCan = pCan;
+      await Product.updateMany(
+        { supplier: req.user.id, category: 'Water Can', isActive: true },
+        { $set: { price: pCan } }
+      );
+    }
 
     const pTanker = pricePerTanker !== undefined ? pricePerTanker : price_per_tanker;
-    if (pTanker !== undefined) fieldsToUpdate.pricePerTanker = pTanker;
+    if (pTanker !== undefined) {
+      fieldsToUpdate.pricePerTanker = pTanker;
+      await Product.updateMany(
+        { supplier: req.user.id, name: { $regex: /tanker/i }, isActive: true },
+        { $set: { price: pTanker } }
+      );
+    }
 
     const wType = waterType || water_type;
     if (wType) fieldsToUpdate.waterType = wType;

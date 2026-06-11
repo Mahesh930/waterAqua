@@ -22,7 +22,7 @@ const protect = async (req, res, next) => {
 
   try {
     // Verify token
-    const decoded = jwt.verify(token, process.env.JWT_SECRET || 'aquahome_jwt_secret_key_2026_xyz');
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
 
     // Get user from database
     const user = await User.findById(decoded.id);

@@ -59,6 +59,8 @@ export function AuthProvider({ children }) {
   const mappedUser = user ? {
     id: user.id || user._id,
     email: user.email,
+    pincode: user.pincode,
+    address: user.address,
     user_metadata: {
       name: user.name,
       phone: user.phone

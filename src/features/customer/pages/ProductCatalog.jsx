@@ -7,6 +7,7 @@ import { Input } from "@/ui/input";
 import { useCart } from "@/features/customer/hooks/use-cart";
 import { useGetProductsQuery, useGetSupplierByIdQuery } from "@/store/api";
 import { motion } from "framer-motion";
+import { useAuth } from "@/contexts/AuthContext";
 
 const categories = [
   { key: "all", label: "All Products" },
@@ -24,11 +25,13 @@ export default function ProductCatalog() {
   const [category, setCategory] = useState("all");
 
   const { addToCart } = useCart();
+  const { user } = useAuth();
 
   // Queries
   const { data: supplierDetails } = useGetSupplierByIdQuery(supplierId, { skip: !supplierId });
   const { data: products = [], isLoading } = useGetProductsQuery({
     supplierId: supplierId || undefined,
+    pincode: !supplierId ? user?.pincode : undefined,
     category: category !== "all" ? category : undefined,
     search: search || undefined
   });
@@ -68,7 +71,12 @@ export default function ProductCatalog() {
         ) : (
           <div>
             <h1 className="text-3xl font-black text-white tracking-tight">Water Catalog</h1>
-            <p className="text-slate-400 text-sm mt-0.5">Browse pure hydration packs from local verified suppliers.</p>
+            <p className="text-slate-400 text-sm mt-0.5">
+              {user?.pincode 
+                ? `Browsing pure hydration packs servicing your pincode (${user.pincode})` 
+                : "Browse pure hydration packs from local verified suppliers."
+              }
+            </p>
           </div>
         )}
       </div>
@@ -152,7 +160,15 @@ export default function ProductCatalog() {
               <div className="p-4 flex-1 flex flex-col justify-between">
                 <div>
                   <h4 className="font-bold text-sm text-white group-hover:text-blue-300 transition-colors line-clamp-1">{p.name}</h4>
-                  <p className="text-xs text-slate-500 mt-1 line-clamp-2 leading-relaxed min-h-[32px]">
+                  {p.supplierProfile && (
+                    <div className="flex items-center gap-1.5 mt-1 text-[11px] text-slate-400">
+                      <span className="font-semibold text-slate-300 truncate max-w-[120px]">{p.supplierProfile.businessName}</span>
+                      <span className="text-slate-600 font-black">·</span>
+                      <Star className="h-3 w-3 fill-amber-500 text-amber-500 shrink-0" />
+                      <span className="text-slate-300 font-bold">{Number(p.supplierProfile.rating || 0).toFixed(1)}</span>
+                    </div>
+                  )}
+                  <p className="text-xs text-slate-500 mt-1.5 line-clamp-2 leading-relaxed min-h-[32px]">
                     {p.description || "Fresh purified mineral drinking water."}
                   </p>
                 </div>

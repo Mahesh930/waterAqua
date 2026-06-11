@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { ShoppingCart, Minus, Plus, Trash2, ArrowRight, Droplets, MapPin, Phone, Truck, ShieldCheck, Tag, Calendar, Clock } from "lucide-react";
 import { Button } from "@/ui/button";
 import { Input } from "@/ui/input";
@@ -10,6 +10,7 @@ import { useNavigate } from "react-router-dom";
 import { useToast } from "@/shared/hooks/use-toast";
 import { useCreateOrderMutation, useVerifyRazorpayPaymentMutation } from "@/store/api";
 import { motion, AnimatePresence } from "framer-motion";
+import { useAuth } from "@/contexts/AuthContext";
 
 const container = { hidden: {}, show: { transition: { staggerChildren: 0.05 } } };
 const item = { hidden: { opacity: 0, y: 15 }, show: { opacity: 1, y: 0 } };
@@ -25,15 +26,25 @@ export default function Cart() {
   const { items, isLoading, updateQty, clearCart, totalItems, totalPrice } = useCart();
   const navigate = useNavigate();
   const { toast } = useToast();
+  const { user } = useAuth();
 
   const [createOrder, { isLoading: placing }] = useCreateOrderMutation();
   const [verifyRazorpayPayment] = useVerifyRazorpayPaymentMutation();
 
   // Checkout Form fields
-  const [address, setAddress] = useState("");
-  const [pincode, setPincode] = useState("");
-  const [phone, setPhone] = useState("");
+  const [address, setAddress] = useState(user?.address || "");
+  const [pincode, setPincode] = useState(user?.pincode || "");
+  const [phone, setPhone] = useState(user?.phone || "");
   const [deliveryDate, setDeliveryDate] = useState("");
+
+  // Sync user profile data once loaded
+  useEffect(() => {
+    if (user) {
+      if (user.address && !address) setAddress(user.address);
+      if (user.pincode && !pincode) setPincode(user.pincode);
+      if (user.phone && !phone) setPhone(user.phone);
+    }
+  }, [user]);
   const [deliveryTimeSlot, setDeliveryTimeSlot] = useState(timeSlots[0]);
   const [paymentMethod, setPaymentMethod] = useState("cod");
   const [notes, setNotes] = useState("");
@@ -94,7 +105,7 @@ export default function Cart() {
 
       if (paymentMethod === 'online') {
         const options = {
-          key: import.meta.env.VITE_RAZORPAY_KEY_ID || "rzp_test_MaheshAquahome2026",
+          key: resOrder.razorpayKeyId || import.meta.env.VITE_RAZORPAY_KEY_ID || "rzp_test_MaheshAquahome2026",
           amount: Math.round(resOrder.totalAmount * 100), // paise
           currency: "INR",
           name: "AquaHome Water Network",

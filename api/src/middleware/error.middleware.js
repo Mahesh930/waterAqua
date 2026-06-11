@@ -2,7 +2,8 @@ module.exports = (err, req, res, next) => {
   let statusCode = err.statusCode || 500;
   let message = err.message || 'Internal Server Error';
 
-  console.error(`[Error Log]: ${err.stack || err}`);
+  const log = req.logger || require('../utils/logger');
+  log.error({ err: { message: err.message, stack: err.stack } }, `Error handled: ${err.message}`);
 
   // Mongoose Duplicate Key Error (e.g. unique email constraint)
   if (err.code === 11000) {

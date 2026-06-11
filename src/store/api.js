@@ -14,6 +14,7 @@ export const api = createApi({
       }
       return headers;
     },
+    credentials: 'include',
   }),
   tagTypes: ['User', 'Product', 'Order', 'Cart', 'Supplier', 'Notification', 'Feedback', 'Admin'],
   endpoints: (builder) => ({
@@ -84,13 +85,32 @@ export const api = createApi({
       transformResponse: (response) => response.data,
       providesTags: ['Feedback'],
     }),
+    submitFeedback: builder.mutation({
+      query: ({ orderId, rating, comment }) => ({
+        url: `/orders/${orderId}/feedback`,
+        method: 'POST',
+        body: { rating, comment },
+      }),
+      transformResponse: (response) => response.data,
+      invalidatesTags: ['Order', 'Feedback', 'Supplier'],
+    }),
 
     // PRODUCT ENDPOINTS
     getProducts: builder.query({
-      query: (params) => ({
-        url: '/products',
-        params: params || undefined,
-      }),
+      query: (params) => {
+        const cleanParams = {};
+        if (params) {
+          Object.keys(params).forEach(key => {
+            if (params[key] !== undefined && params[key] !== null && params[key] !== 'undefined' && params[key] !== 'null') {
+              cleanParams[key] = params[key];
+            }
+          });
+        }
+        return {
+          url: '/products',
+          params: cleanParams,
+        };
+      },
       transformResponse: (response) => response.data,
       providesTags: ['Product'],
     }),
@@ -205,6 +225,14 @@ export const api = createApi({
       transformResponse: (response) => response.data,
       invalidatesTags: ['Order'],
     }),
+    cancelOrder: builder.mutation({
+      query: (id) => ({
+        url: `/orders/${id}/cancel`,
+        method: 'PATCH',
+      }),
+      transformResponse: (response) => response.data,
+      invalidatesTags: ['Order', 'Product'],
+    }),
     verifyOtp: builder.mutation({
       query: ({ id, otp }) => ({
         url: `/orders/${id}/verify-otp`,
@@ -276,6 +304,7 @@ export const {
   useGetMySupplierQuery,
   useUpdateSupplierMutation,
   useGetSupplierFeedbackQuery,
+  useSubmitFeedbackMutation,
   useGetProductsQuery,
   useGetProductByIdQuery,
   useCreateProductMutation,
@@ -291,6 +320,7 @@ export const {
   useCreateOrderMutation,
   useVerifyRazorpayPaymentMutation,
   useUpdateOrderStatusMutation,
+  useCancelOrderMutation,
   useVerifyOtpMutation,
   useGetNotificationsQuery,
   useMarkNotificationsReadMutation,

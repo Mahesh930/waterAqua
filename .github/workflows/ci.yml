@@ -1,0 +1,67 @@
+name: AquaHome CI Pipeline
+
+on:
+  push:
+    branches: [ main, master ]
+  pull_request:
+    branches: [ main, master ]
+
+jobs:
+  backend-test:
+    name: Backend Test Suite
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 18
+          cache: 'npm'
+          cache-dependency-path: api/package-lock.json
+
+      - name: Install Backend Dependencies
+        run: |
+          cd api
+          npm ci
+
+      - name: Run Jest Test Suite
+        run: |
+          cd api
+          npm run test
+        env:
+          JWT_SECRET: ci_test_jwt_secret_key_2026_xyz
+          MONGODB_URI: mongodb://localhost:27017/aquahome_ci_test
+          RAZORPAY_KEY_ID: rzp_test_dummy
+          RAZORPAY_KEY_SECRET: dummy_secret
+          NODE_ENV: test
+
+  frontend-test:
+    name: Frontend Test Suite & Lint
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 18
+          cache: 'npm'
+          cache-dependency-path: package-lock.json
+
+      - name: Install Frontend Dependencies
+        run: npm ci
+
+      - name: Run ESlint Linting
+        run: npm run lint
+        continue-on-error: true
+
+      - name: Run Vitest Unit Tests
+        run: npm run test
+
+      - name: Build Application
+        run: npm run build

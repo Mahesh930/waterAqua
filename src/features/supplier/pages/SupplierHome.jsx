@@ -85,7 +85,7 @@ export default function SupplierHome() {
             </Link>
             <Link to="/supplier/profile">
               <Button className="rounded-xl border border-white/20 hover:bg-white/10 bg-white/5 text-white font-semibold px-5">
-                Business Settings
+                Edit Profile
               </Button>
             </Link>
           </div>

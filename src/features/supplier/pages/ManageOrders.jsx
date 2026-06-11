@@ -307,6 +307,19 @@ export default function ManageOrders() {
                           <span className={`px-2.5 py-0.5 rounded-lg text-[9px] font-extrabold border uppercase tracking-wider ${statusColors[order.status]}`}>
                             {statusLabels[order.status]}
                           </span>
+                          <span className={`px-2.5 py-0.5 rounded-lg text-[9px] font-extrabold border uppercase tracking-wider ${
+                            order.paymentMethod === 'online'
+                              ? order.paymentStatus === 'paid'
+                                ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20'
+                                : 'bg-amber-500/10 text-amber-400 border-amber-500/20'
+                              : 'bg-slate-500/10 text-slate-400 border-slate-500/20'
+                          }`}>
+                            {order.paymentMethod === 'online'
+                              ? order.paymentStatus === 'paid'
+                                ? '💳 Paid'
+                                : '💳 Pay Pending'
+                              : '💵 COD'}
+                          </span>
                         </div>
                         <div className="flex items-center gap-3 text-xs text-slate-400 mt-1">
                           <span className="font-semibold text-slate-300">

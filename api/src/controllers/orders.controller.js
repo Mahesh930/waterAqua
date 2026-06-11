@@ -5,11 +5,16 @@ const AdminCommission = require('../models/AdminCommission');
 const Notification = require('../models/Notification');
 const Razorpay = require('razorpay');
 const crypto = require('crypto');
+const mongoose = require('mongoose');
+const paginate = require('../utils/pagination');
+const { logAudit } = require('../utils/auditLogger');
 
 // @desc    Place a new order
 // @route   POST /api/v1/orders
 // @access  Private (Customer Only)
 exports.createOrder = async (req, res, next) => {
+  const session = await mongoose.startSession();
+  session.startTransaction();
   try {
     const {
       deliveryAddress,
@@ -22,9 +27,11 @@ exports.createOrder = async (req, res, next) => {
     } = req.body;
 
     // Fetch customer's cart items
-    const cartItems = await CartItem.find({ user: req.user.id }).populate('product');
+    const cartItems = await CartItem.find({ user: req.user.id }).populate('product').session(session);
 
     if (!cartItems || cartItems.length === 0) {
+      await session.abortTransaction();
+      session.endSession();
       return res.status(400).json({
         success: false,
         error: 'Your shopping cart is empty',
@@ -37,6 +44,8 @@ exports.createOrder = async (req, res, next) => {
     const allSameSupplier = cartItems.every(item => item.supplier.toString() === supplierId);
 
     if (!allSameSupplier) {
+      await session.abortTransaction();
+      session.endSession();
       return res.status(400).json({
         success: false,
         error: 'All items in your cart must belong to the same supplier for checkout',
@@ -50,9 +59,21 @@ exports.createOrder = async (req, res, next) => {
 
     for (const item of cartItems) {
       if (!item.product || !item.product.isActive) {
+        await session.abortTransaction();
+        session.endSession();
         return res.status(400).json({
           success: false,
           error: `Product ${item.product ? item.product.name : 'Unknown'} is no longer available`,
+          timestamp: new Date().toISOString()
+        });
+      }
+
+      if (item.product.stock < item.quantity) {
+        await session.abortTransaction();
+        session.endSession();
+        return res.status(400).json({
+          success: false,
+          error: `Product ${item.product.name} has insufficient stock. Available: ${item.product.stock}`,
           timestamp: new Date().toISOString()
         });
       }
@@ -67,21 +88,35 @@ exports.createOrder = async (req, res, next) => {
         quantity: item.quantity
       });
 
-      // Decrement catalog stock
-      item.product.stock = Math.max(0, item.product.stock - item.quantity);
-      await item.product.save();
+      // Decrement catalog stock atomically
+      const updatedProduct = await Product.findOneAndUpdate(
+        { _id: item.product._id, stock: { $gte: item.quantity } },
+        { $inc: { stock: -item.quantity } },
+        { session, new: true }
+      );
+
+      if (!updatedProduct) {
+        await session.abortTransaction();
+        session.endSession();
+        return res.status(400).json({
+          success: false,
+          error: `Failed to secure stock for product ${item.product.name}. Stock was modified by another request.`,
+          timestamp: new Date().toISOString()
+        });
+      }
     }
 
-    // Generate secure 4-digit OTP for delivery verification
-    const otp = Math.floor(1000 + Math.random() * 9000).toString();
+    // Generate secure 6-digit OTP for delivery verification
+    const otp = crypto.randomInt(100000, 999999).toString();
+    const otpExpiresAt = new Date(Date.now() + 60 * 60 * 1000); // 1 hour expiry
 
     // Generate unique Razorpay Order ID for online payments
     let razorpayOrderId = '';
     if (paymentMethod === 'online') {
       try {
         const razorpayInstance = new Razorpay({
-          key_id: process.env.RAZORPAY_KEY_ID || 'rzp_test_MaheshAquahome2026',
-          key_secret: process.env.RAZORPAY_KEY_SECRET || 'aquahomesecret1234567890'
+          key_id: process.env.RAZORPAY_KEY_ID,
+          key_secret: process.env.RAZORPAY_KEY_SECRET
         });
         const rpOrder = await razorpayInstance.orders.create({
           amount: Math.round(totalAmount * 100), // lowest unit (paise)
@@ -90,6 +125,8 @@ exports.createOrder = async (req, res, next) => {
         });
         razorpayOrderId = rpOrder.id;
       } catch (err) {
+        await session.abortTransaction();
+        session.endSession();
         console.error('Razorpay Order Creation Error:', err);
         return res.status(500).json({
           success: false,
@@ -100,7 +137,7 @@ exports.createOrder = async (req, res, next) => {
     }
 
     // Create the order
-    const order = await Order.create({
+    const order = await Order.create([{
       customer: req.user.id,
       supplier: supplierId,
       products,
@@ -111,13 +148,17 @@ exports.createOrder = async (req, res, next) => {
       deliveryDate: new Date(deliveryDate),
       deliveryTimeSlot,
       otp,
+      otpExpiresAt,
+      otpAttempts: 0,
       paymentMethod: paymentMethod || 'cod',
       razorpayOrderId,
       notes: notes || ''
-    });
+    }], { session });
+
+    const newOrder = order[0];
 
     // Clear user's cart
-    await CartItem.deleteMany({ user: req.user.id });
+    await CartItem.deleteMany({ user: req.user.id }, { session });
 
     // Calculate admin commission
     const orderHour = new Date().getHours();
@@ -125,8 +166,8 @@ exports.createOrder = async (req, res, next) => {
     const commissionRate = isPeakHour ? 0.08 : 0.05; // 8% during peak hours, otherwise 5%
     const commissionAmount = totalAmount * commissionRate;
 
-    await AdminCommission.create({
-      order: order._id,
+    await AdminCommission.create([{
+      order: newOrder._id,
       customer: req.user.id,
       supplier: supplierId,
       orderAmount: totalAmount,
@@ -136,30 +177,50 @@ exports.createOrder = async (req, res, next) => {
       orderHour,
       pincode: deliveryPincode,
       formulaBreakdown: `${totalAmount} * ${commissionRate * 100}% = ${commissionAmount} (Peak Hour: ${isPeakHour ? 'Yes' : 'No'})`
-    });
+    }], { session });
 
-    // Create delivery/placed notifications
-    await Notification.create({
+    // Create delivery/placed notifications (without raw OTP in text)
+    await Notification.create([{
       user: supplierId,
       title: 'New Order Received',
       message: `You have received a new order for ${totalAmount} Rs. OTP generated is sent to customer.`,
       type: 'order'
-    });
+    }], { session });
 
-    await Notification.create({
+    await Notification.create([{
       user: req.user.id,
       title: 'Order Placed Successfully',
-      message: `Your water order has been placed. Share OTP ${otp} with supplier only upon delivery.`,
+      message: `Your water order has been placed. Please share the delivery verification OTP with the supplier only upon delivery. You can view the OTP on the order tracking page.`,
       type: 'order'
+    }], { session });
+
+    // Commit transaction
+    await session.commitTransaction();
+    session.endSession();
+
+    await logAudit({
+      userId: req.user.id,
+      action: 'order_placed',
+      entityType: 'Order',
+      entityId: newOrder._id,
+      details: { supplierId, totalAmount, paymentMethod },
+      req
     });
 
-    // Emit live event to supplier
+    // Emit live event to supplier room
     if (req.io) {
-      req.io.emit('newOrder', { supplierId, orderId: order._id });
+      req.io.to(`supplier:${supplierId}`).emit('newOrder', { supplierId, orderId: newOrder._id });
     }
 
-    res.success(order, 201);
+    const orderData = newOrder.toObject ? newOrder.toObject() : newOrder;
+    if (paymentMethod === 'online') {
+      orderData.razorpayKeyId = process.env.RAZORPAY_KEY_ID;
+    }
+
+    res.success(orderData, 201);
   } catch (error) {
+    await session.abortTransaction();
+    session.endSession();
     next(error);
   }
 };
@@ -177,12 +238,26 @@ exports.getOrders = async (req, res, next) => {
       filter.supplier = req.user.id;
     }
 
-    const orders = await Order.find(filter)
-      .populate({ path: 'customer', select: 'name email phone avatarUrl address' })
-      .populate({ path: 'supplier', select: 'name email phone' })
-      .sort({ createdAt: -1 });
+    const populateOptions = [
+      { path: 'customer', select: 'name email phone avatarUrl address' },
+      { path: 'supplier', select: 'name email phone' }
+    ];
 
-    res.success(orders);
+    const paginatedResult = await paginate(Order, filter, req, populateOptions, '', { createdAt: -1 });
+
+    // Sanitize orders for supplier to hide OTP
+    const sanitizedResults = paginatedResult.results.map(order => {
+      const oObj = order.toObject();
+      if (req.user.role === 'supplier' && !oObj.otpVerified) {
+        delete oObj.otp;
+      }
+      return oObj;
+    });
+
+    res.success({
+      results: sanitizedResults,
+      pagination: paginatedResult.pagination
+    });
   } catch (error) {
     next(error);
   }
@@ -218,7 +293,13 @@ exports.getOrderById = async (req, res, next) => {
       });
     }
 
-    res.success(order);
+    // Sanitize order for supplier to hide OTP
+    const orderObj = order.toObject();
+    if (req.user.role === 'supplier' && !orderObj.otpVerified) {
+      delete orderObj.otp;
+    }
+
+    res.success(orderObj);
   } catch (error) {
     next(error);
   }
@@ -261,6 +342,15 @@ exports.updateOrderStatus = async (req, res, next) => {
 
     order.status = status;
     await order.save();
+
+    await logAudit({
+      userId: req.user.id,
+      action: 'order_status_updated',
+      entityType: 'Order',
+      entityId: order._id,
+      details: { status },
+      req
+    });
 
     // Notify customer about status change
     await Notification.create({
@@ -314,11 +404,31 @@ exports.verifyOtp = async (req, res, next) => {
       });
     }
 
-    // Check if OTP matches
-    if (order.otp !== otp) {
+    // Check if OTP attempts exceeded
+    if (order.otpAttempts >= 5) {
       return res.status(400).json({
         success: false,
-        error: 'Invalid 4-digit OTP code. Delivery verification failed.',
+        error: 'Maximum OTP verification attempts exceeded. Please contact support.',
+        timestamp: new Date().toISOString()
+      });
+    }
+
+    // Check if OTP has expired
+    if (new Date() > order.otpExpiresAt) {
+      return res.status(400).json({
+        success: false,
+        error: 'The delivery verification OTP has expired. Please contact support.',
+        timestamp: new Date().toISOString()
+      });
+    }
+
+    // Check if OTP matches
+    if (order.otp !== otp) {
+      order.otpAttempts += 1;
+      await order.save();
+      return res.status(400).json({
+        success: false,
+        error: `Invalid OTP code. ${5 - order.otpAttempts} attempts remaining.`,
         timestamp: new Date().toISOString()
       });
     }
@@ -329,6 +439,44 @@ exports.verifyOtp = async (req, res, next) => {
       order.paymentStatus = 'paid';
     }
     await order.save();
+
+    // Check if this is the customer's first completed order to claim referral bonus
+    const completedOrdersCount = await Order.countDocuments({
+      customer: order.customer,
+      status: 'delivered'
+    });
+
+    if (completedOrdersCount === 1) {
+      const Referral = require('../models/Referral');
+      const pendingReferral = await Referral.findOne({ referred: order.customer, status: 'pending' });
+      if (pendingReferral) {
+        pendingReferral.status = 'completed';
+        await pendingReferral.save();
+
+        await Notification.create({
+          user: pendingReferral.referrer,
+          title: 'Referral Reward Earned!',
+          message: `Your referral reward of ${pendingReferral.rewardAmount} Rs has been credited as your friend completed their first order!`,
+          type: 'order'
+        });
+
+        await Notification.create({
+          user: pendingReferral.referred,
+          title: 'Referral Reward Earned!',
+          message: `Your signup referral reward of ${pendingReferral.rewardAmount} Rs has been credited!`,
+          type: 'order'
+        });
+      }
+    }
+
+    await logAudit({
+      userId: req.user.id,
+      action: 'order_otp_verified',
+      entityType: 'Order',
+      entityId: order._id,
+      details: { paymentMethod: order.paymentMethod, status: order.status },
+      req
+    });
 
     // Create completion alerts
     await Notification.create({
@@ -380,7 +528,7 @@ exports.verifyRazorpayPayment = async (req, res, next) => {
     // Cryptographic signature check
     const body = razorpay_order_id + '|' + razorpay_payment_id;
     const expectedSignature = crypto
-      .createHmac('sha256', process.env.RAZORPAY_KEY_SECRET || 'aquahomesecret1234567890')
+      .createHmac('sha256', process.env.RAZORPAY_KEY_SECRET)
       .update(body.toString())
       .digest('hex');
 
@@ -422,6 +570,104 @@ exports.verifyRazorpayPayment = async (req, res, next) => {
 
     res.success(order);
   } catch (error) {
+    next(error);
+  }
+};
+
+// @desc    Cancel order by customer
+// @route   PATCH /api/v1/orders/:id/cancel
+// @access  Private (Customer Only)
+exports.cancelOrder = async (req, res, next) => {
+  const session = await mongoose.startSession();
+  session.startTransaction();
+  try {
+    let order = await Order.findById(req.params.id).session(session);
+
+    if (!order) {
+      await session.abortTransaction();
+      session.endSession();
+      return res.status(404).json({
+        success: false,
+        error: 'Order record not found',
+        timestamp: new Date().toISOString()
+      });
+    }
+
+    // Verify authorized user (customer who placed it)
+    if (order.customer.toString() !== req.user.id) {
+      await session.abortTransaction();
+      session.endSession();
+      return res.status(403).json({
+        success: false,
+        error: 'Not authorized to cancel this order',
+        timestamp: new Date().toISOString()
+      });
+    }
+
+    // Allowed to cancel only if placed or confirmed
+    if (!['placed', 'confirmed'].includes(order.status)) {
+      await session.abortTransaction();
+      session.endSession();
+      return res.status(400).json({
+        success: false,
+        error: `Cannot cancel order in state: ${order.status}. Only placed or confirmed orders can be cancelled.`,
+        timestamp: new Date().toISOString()
+      });
+    }
+
+    // Restore stock
+    for (const item of order.products) {
+      await Product.findByIdAndUpdate(
+        item.product,
+        { $inc: { stock: item.quantity } },
+        { session }
+      );
+    }
+
+    order.status = 'cancelled';
+    await order.save({ session });
+
+    // Create notifications for customer and supplier
+    await Notification.create([{
+      user: order.customer,
+      title: 'Order Cancelled Successfully',
+      message: `Your order of ${order.totalAmount} Rs has been cancelled and products stock restored.`,
+      type: 'order'
+    }], { session });
+
+    await Notification.create([{
+      user: order.supplier,
+      title: 'Order Cancelled by Customer',
+      message: `Order #${order._id} was cancelled by the customer. Stock has been restored automatically.`,
+      type: 'order'
+    }], { session });
+
+    await session.commitTransaction();
+    session.endSession();
+
+    await logAudit({
+      userId: req.user.id,
+      action: 'order_cancelled_by_customer',
+      entityType: 'Order',
+      entityId: order._id,
+      details: { originalStatus: order.status, restoredProducts: order.products.map(p => ({ product: p.product, quantity: p.quantity })) },
+      req
+    });
+
+    order = await order.populate([
+      { path: 'customer', select: 'name email phone avatarUrl address' },
+      { path: 'supplier', select: 'name email phone' }
+    ]);
+
+    // Emit live WebSockets updates
+    if (req.io) {
+      req.io.to(`order:${order._id}`).emit('orderStatusChanged', order);
+    }
+
+    res.success(order);
+  } catch (error) {
+    await session.abortTransaction();
+    session.endSession();
     next(error);
   }
 };

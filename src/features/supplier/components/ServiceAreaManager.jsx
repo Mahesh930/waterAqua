@@ -8,7 +8,7 @@ import { useGetMySupplierQuery, useUpdateSupplierMutation } from "@/store/api";
 import { usePincode } from "@/shared/hooks/use-pincode";
 import { motion, AnimatePresence } from "framer-motion";
 
-export default function ServiceAreaManager() {
+export default function ServiceAreaManager({ disabled = false }) {
   const { toast } = useToast();
   const [newPincode, setNewPincode] = useState("");
   const { lookup, data: pincodeData, loading: pincodeLoading, reset } = usePincode();
@@ -125,14 +125,15 @@ export default function ServiceAreaManager() {
               onChange={e => handlePincodeChange(e.target.value)}
               className="pl-10 rounded-xl h-11 bg-[#090d22] border-white/5 font-semibold text-white focus-visible:ring-blue-500"
               maxLength={6}
+              disabled={disabled}
             />
           </div>
           <Button variant="outline" size="icon" className="h-11 w-11 rounded-xl shrink-0 border-white/5 bg-[#0e142e] hover:bg-white/5 text-slate-300"
-            onClick={handleGPS} disabled={gpsLoading}>
+            onClick={handleGPS} disabled={gpsLoading || disabled}>
             <Locate className={`h-4 w-4 ${gpsLoading ? "animate-pulse" : ""}`} />
           </Button>
           <Button className="rounded-xl h-11 gap-1.5 shrink-0 bg-blue-600 hover:bg-blue-500 text-white font-bold" onClick={addArea}
-            disabled={!pincodeData || newPincode.length !== 6}>
+            disabled={!pincodeData || newPincode.length !== 6 || disabled}>
             <Plus className="h-4 w-4" /> Add
           </Button>
         </div>
@@ -171,7 +172,7 @@ export default function ServiceAreaManager() {
                   <p className="text-sm font-black text-blue-400 mt-0.5">{pincode}</p>
                 </div>
                 <Button variant="ghost" size="icon" className="h-8 w-8 rounded-lg text-rose-400 hover:text-white hover:bg-rose-500/10"
-                  onClick={() => removeArea(pincode)}>
+                  onClick={() => removeArea(pincode)} disabled={disabled}>
                   <Trash2 className="h-3.5 w-3.5" />
                 </Button>
               </motion.div>

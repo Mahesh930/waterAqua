@@ -54,5 +54,6 @@ const ProductSchema = new mongoose.Schema(
 
 // Create compound index for listing products by supplier
 ProductSchema.index({ supplier: 1, category: 1 });
+ProductSchema.index({ supplier: 1, isActive: 1 });
 
 module.exports = mongoose.model('Product', ProductSchema);

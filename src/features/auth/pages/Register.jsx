@@ -87,7 +87,7 @@ export default function Register() {
   };
 
   return (
-    <div className="min-h-screen bg-[#070b19] flex items-center justify-center p-4 relative overflow-hidden text-slate-100">
+    <div className="min-h-screen bg-[#070b19] flex items-center justify-center p-4 relative overflow-y-auto overflow-x-hidden text-slate-100">
       {/* Background gradients */}
       <div className="absolute top-20 right-20 w-72 h-72 bg-blue-500/10 rounded-full blur-3xl -z-10" />
       <div className="absolute bottom-20 left-20 w-96 h-96 bg-teal-500/10 rounded-full blur-3xl -z-10" />

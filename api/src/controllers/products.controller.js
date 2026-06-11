@@ -1,16 +1,23 @@
 const Product = require('../models/Product');
+const Supplier = require('../models/Supplier');
+const paginate = require('../utils/pagination');
 
 // @desc    Get all products
 // @route   GET /api/v1/products
 // @access  Public
 exports.getProducts = async (req, res, next) => {
   try {
-    const { supplierId, category, search } = req.query;
+    const { supplierId, category, search, pincode } = req.query;
     const query = { isActive: true };
 
-    if (supplierId) {
+    if (supplierId && supplierId !== 'undefined' && supplierId !== 'null') {
       query.supplier = supplierId;
+    } else if (pincode && pincode !== 'undefined' && pincode !== 'null') {
+      const suppliers = await Supplier.find({ serviceAreas: pincode, isActive: true });
+      const supplierUserIds = suppliers.map(s => s.user);
+      query.supplier = { $in: supplierUserIds };
     }
+
     if (category) {
       query.category = category;
     }
@@ -18,12 +25,40 @@ exports.getProducts = async (req, res, next) => {
       query.name = { $regex: search, $options: 'i' };
     }
 
-    const products = await Product.find(query).populate({
+    const populateOptions = [{
       path: 'supplier',
       select: 'name email phone avatarUrl address'
+    }];
+
+    const paginatedResult = await paginate(Product, query, req, populateOptions, '', { createdAt: -1 });
+    const products = paginatedResult.results;
+
+    const supplierUserIds = products.map(p => p.supplier?._id).filter(Boolean);
+    const supplierProfiles = await Supplier.find({ user: { $in: supplierUserIds } });
+    const supplierMap = {};
+    supplierProfiles.forEach(s => {
+      supplierMap[s.user.toString()] = s;
     });
 
-    res.success(products);
+    const productsWithSupplierDetails = products.map(p => {
+      const pObj = p.toObject();
+      if (pObj.supplier) {
+        const sProfile = supplierMap[pObj.supplier._id.toString()];
+        pObj.supplierProfile = sProfile ? {
+          id: sProfile._id,
+          businessName: sProfile.businessName,
+          waterType: sProfile.waterType,
+          rating: sProfile.rating,
+          deliveryCharge: sProfile.deliveryCharge
+        } : null;
+      }
+      return pObj;
+    });
+
+    res.success({
+      results: productsWithSupplierDetails,
+      pagination: paginatedResult.pagination
+    });
   } catch (error) {
     next(error);
   }

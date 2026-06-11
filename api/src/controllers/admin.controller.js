@@ -2,6 +2,7 @@ const User = require('../models/User');
 const Supplier = require('../models/Supplier');
 const Order = require('../models/Order');
 const AdminCommission = require('../models/AdminCommission');
+const paginate = require('../utils/pagination');
 
 // @desc    Get dashboard metrics overview
 // @route   GET /api/v1/admin/overview
@@ -67,8 +68,8 @@ exports.getUsers = async (req, res, next) => {
       filter.role = role;
     }
 
-    const users = await User.find(filter).sort({ createdAt: -1 });
-    res.success(users);
+    const paginatedResult = await paginate(User, filter, req, [], '', { createdAt: -1 });
+    res.success(paginatedResult);
   } catch (error) {
     next(error);
   }
@@ -79,11 +80,9 @@ exports.getUsers = async (req, res, next) => {
 // @access  Private (Admin Only)
 exports.getSuppliers = async (req, res, next) => {
   try {
-    const suppliers = await Supplier.find()
-      .populate({ path: 'user', select: 'name email phone avatarUrl address' })
-      .sort({ rating: -1 });
-
-    res.success(suppliers);
+    const populateOptions = [{ path: 'user', select: 'name email phone avatarUrl address' }];
+    const paginatedResult = await paginate(Supplier, {}, req, populateOptions, '', { rating: -1 });
+    res.success(paginatedResult);
   } catch (error) {
     next(error);
   }
@@ -94,13 +93,13 @@ exports.getSuppliers = async (req, res, next) => {
 // @access  Private (Admin Only)
 exports.getCommissions = async (req, res, next) => {
   try {
-    const commissions = await AdminCommission.find()
-      .populate({ path: 'order', select: 'status deliveryPincode' })
-      .populate({ path: 'customer', select: 'name' })
-      .populate({ path: 'supplier', select: 'name' })
-      .sort({ createdAt: -1 });
-
-    res.success(commissions);
+    const populateOptions = [
+      { path: 'order', select: 'status deliveryPincode' },
+      { path: 'customer', select: 'name' },
+      { path: 'supplier', select: 'name' }
+    ];
+    const paginatedResult = await paginate(AdminCommission, {}, req, populateOptions, '', { createdAt: -1 });
+    res.success(paginatedResult);
   } catch (error) {
     next(error);
   }

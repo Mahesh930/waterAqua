@@ -4,9 +4,9 @@ const {
   getSuppliers,
   getSupplierById,
   getMyProfile,
-  updateMyProfile,
-  getSupplierFeedback
+  updateMyProfile
 } = require('../controllers/suppliers.controller');
+const { getSupplierFeedback } = require('../controllers/feedback.controller');
 const { protect, restrictTo } = require('../middleware/auth.middleware');
 
 router.get('/', getSuppliers);

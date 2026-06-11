@@ -127,12 +127,25 @@ export default function CustomerHome() {
             {activeOrders.map((ord) => (
               <div key={ord.id || ord._id} className="p-5 rounded-2xl bg-[#0e142e]/80 border border-white/5 shadow-md flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
                 <div>
-                  <div className="flex items-center gap-3">
+                  <div className="flex items-center gap-2 flex-wrap">
                     <span className="text-xs font-black text-blue-400 bg-blue-500/5 px-2.5 py-1 rounded-lg border border-blue-500/10 uppercase">
                       Order #{ord.id ? ord.id.slice(-6) : ord._id.slice(-6)}
                     </span>
                     <span className={`text-[10px] font-extrabold px-2.5 py-1 rounded-lg border uppercase tracking-wider ${statusColors[ord.status]}`}>
                       {statusLabels[ord.status]}
+                    </span>
+                    <span className={`px-2 py-0.5 rounded-lg text-[9px] font-extrabold border uppercase tracking-wider ${
+                      ord.paymentMethod === 'online'
+                        ? ord.paymentStatus === 'paid'
+                          ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20'
+                          : 'bg-amber-500/10 text-amber-400 border-amber-500/20'
+                        : 'bg-slate-500/10 text-slate-400 border-slate-500/20'
+                    }`}>
+                      {ord.paymentMethod === 'online'
+                        ? ord.paymentStatus === 'paid'
+                          ? 'Paid'
+                          : 'Pay Pending'
+                        : 'COD'}
                     </span>
                   </div>
                   <h4 className="font-bold text-base mt-3 text-white">

@@ -6,20 +6,8 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useGetNotificationsQuery, useMarkNotificationsReadMutation } from "@/store/api";
 import { motion, AnimatePresence } from "framer-motion";
 
-function useTheme() {
-  const [dark, setDark] = useState(() => {
-    if (typeof window === "undefined") return false;
-    return localStorage.getItem("theme") === "dark" ||
-      (!localStorage.getItem("theme") && window.matchMedia("(prefers-color-scheme: dark)").matches);
-  });
-
-  useEffect(() => {
-    document.documentElement.classList.toggle("dark", dark);
-    localStorage.setItem("theme", dark ? "dark" : "light");
-  }, [dark]);
-
-  return { dark, toggle: () => setDark(d => !d) };
-}
+import { useTheme } from "next-themes";
+import { useTranslation } from "react-i18next";
 
 function NotificationPanel({ notifications = [], markAllRead }) {
   useEffect(() => {
@@ -61,7 +49,9 @@ export default function DashboardLayout({ children, navItems, title }) {
   const location = useLocation();
   const navigate = useNavigate();
   const { signOut, profile, user } = useAuth();
-  const { dark, toggle } = useTheme();
+  const { theme, setTheme } = useTheme();
+  const { i18n } = useTranslation();
+  const toggle = () => setTheme(theme === "dark" ? "light" : "dark");
 
   // RTK Query hooks for notifications (with 10 seconds auto-polling)
   const { data: notifications = [] } = useGetNotificationsQuery(undefined, {
@@ -116,6 +106,19 @@ export default function DashboardLayout({ children, navItems, title }) {
               <Button variant="ghost" size="icon" onClick={toggle} className="relative h-9 w-9 text-slate-300 hover:text-white hover:bg-white/5 rounded-xl">
                 <Sun className="h-4 w-4 rotate-0 scale-100 transition-all dark:-rotate-90 dark:scale-0" />
                 <Moon className="absolute h-4 w-4 rotate-90 scale-0 transition-all dark:rotate-0 dark:scale-100" />
+              </Button>
+
+              {/* Language toggle */}
+              <Button 
+                variant="ghost" 
+                size="sm" 
+                onClick={() => {
+                  const currentLang = i18n.language;
+                  i18n.changeLanguage(currentLang === "en" ? "hi" : "en");
+                }}
+                className="h-9 px-2 text-xs font-bold text-slate-300 hover:text-white hover:bg-white/5 rounded-xl"
+              >
+                {i18n.language === "hi" ? "EN" : "हिं"}
               </Button>
 
               {/* Notification bell */}

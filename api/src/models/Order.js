@@ -66,6 +66,14 @@ const OrderSchema = new mongoose.Schema(
       type: String,
       required: true
     },
+    otpExpiresAt: {
+      type: Date,
+      required: true
+    },
+    otpAttempts: {
+      type: Number,
+      default: 0
+    },
     otpVerified: {
       type: Boolean,
       default: false
@@ -101,5 +109,6 @@ const OrderSchema = new mongoose.Schema(
 // Indexes for fast history and active queues lookup
 OrderSchema.index({ customer: 1, createdAt: -1 });
 OrderSchema.index({ supplier: 1, status: 1, createdAt: -1 });
+OrderSchema.index({ status: 1, createdAt: -1 });
 
 module.exports = mongoose.model('Order', OrderSchema);

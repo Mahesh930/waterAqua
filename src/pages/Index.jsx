@@ -26,7 +26,7 @@ const steps = [
 
 export default function Index() {
   return (
-    <div className="min-h-screen bg-[#070b19] text-slate-100 selection:bg-blue-600 selection:text-white overflow-hidden relative">
+    <div className="min-h-screen bg-[#070b19] text-slate-100 selection:bg-blue-600 selection:text-white overflow-x-hidden relative">
       {/* Background gradients */}
       <div className="absolute top-0 left-1/4 w-[500px] h-[500px] bg-blue-500/10 rounded-full blur-3xl -z-10" />
       <div className="absolute bottom-10 right-1/4 w-[600px] h-[600px] bg-sky-500/10 rounded-full blur-3xl -z-10" />

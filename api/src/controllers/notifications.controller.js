@@ -1,15 +1,13 @@
 const Notification = require('../models/Notification');
+const paginate = require('../utils/pagination');
 
 // @desc    Get user notifications
 // @route   GET /api/v1/notifications
 // @access  Private
 exports.getNotifications = async (req, res, next) => {
   try {
-    const notifications = await Notification.find({ user: req.user.id })
-      .sort({ createdAt: -1 })
-      .limit(50);
-
-    res.success(notifications);
+    const paginatedResult = await paginate(Notification, { user: req.user.id }, req, [], '', { createdAt: -1 });
+    res.success(paginatedResult);
   } catch (error) {
     next(error);
   }

@@ -1,10 +1,11 @@
 const User = require('../models/User');
 const Supplier = require('../models/Supplier');
 const jwt = require('jsonwebtoken');
+const { logAudit } = require('../utils/auditLogger');
 
 // Helper to generate and sign JWT token
 const signToken = (id) => {
-  return jwt.sign({ id }, process.env.JWT_SECRET || 'aquahome_jwt_secret_key_2026_xyz', {
+  return jwt.sign({ id }, process.env.JWT_SECRET, {
     expiresIn: process.env.JWT_EXPIRES_IN || '7d'
   });
 };
@@ -14,7 +15,7 @@ const signToken = (id) => {
 // @access  Public
 exports.register = async (req, res, next) => {
   try {
-    const { name, email, password, phone, role, pincode, address, businessName } = req.body;
+    const { name, email, password, phone, role, pincode, address, businessName, referredByCode } = req.body;
 
     // Check if user already exists
     const userExists = await User.findOne({ email });
@@ -32,10 +33,24 @@ exports.register = async (req, res, next) => {
       email,
       password,
       phone,
-      role: role || 'customer',
+      role: ['customer', 'supplier'].includes(role) ? role : 'customer',
       pincode: pincode || '',
       address: address || ''
     });
+
+    // Handle referral if referredByCode is provided
+    if (referredByCode) {
+      const referrer = await User.findOne({ referralCode: referredByCode.toUpperCase(), deletedAt: null });
+      if (referrer) {
+        const Referral = require('../models/Referral');
+        await Referral.create({
+          referrer: referrer._id,
+          referred: user._id,
+          status: 'pending',
+          rewardAmount: 50 // standard reward value
+        });
+      }
+    }
 
     // If role is supplier, create default supplier profile
     if (user.role === 'supplier') {
@@ -52,6 +67,15 @@ exports.register = async (req, res, next) => {
     // Remove password from response payload
     const userResponse = user.toObject();
     delete userResponse.password;
+
+    await logAudit({
+      userId: user._id,
+      action: 'user_registered',
+      entityType: 'User',
+      entityId: user._id,
+      details: { role: user.role, email: user.email },
+      req
+    });
 
     res.success({
       token,
@@ -79,7 +103,7 @@ exports.login = async (req, res, next) => {
     }
 
     // Check user in database (explicitly select password)
-    const user = await User.findOne({ email }).select('+password');
+    const user = await User.findOne({ email, deletedAt: null }).select('+password');
     if (!user) {
       return res.status(401).json({
         success: false,
@@ -111,6 +135,15 @@ exports.login = async (req, res, next) => {
 
     const userResponse = user.toObject();
     delete userResponse.password;
+
+    await logAudit({
+      userId: user._id,
+      action: 'user_logged_in',
+      entityType: 'User',
+      entityId: user._id,
+      details: { email: user.email, role: user.role },
+      req
+    });
 
     res.success({
       token,
@@ -162,7 +195,110 @@ exports.updateProfile = async (req, res, next) => {
       { new: true, runValidators: true }
     );
 
+    await logAudit({
+      userId: req.user.id,
+      action: 'user_profile_updated',
+      entityType: 'User',
+      entityId: req.user.id,
+      details: { updatedFields: Object.keys(fieldsToUpdate) },
+      req
+    });
+
     res.success({ user });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// @desc    Forgot password request
+// @route   POST /api/v1/auth/forgot-password
+// @access  Public
+exports.forgotPassword = async (req, res, next) => {
+  try {
+    const { email } = req.body;
+
+    const user = await User.findOne({ email, deletedAt: null });
+
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        error: 'There is no active user registered with this email address',
+        timestamp: new Date().toISOString()
+      });
+    }
+
+    // Get reset token
+    const resetToken = user.getResetPasswordToken();
+
+    await user.save({ validateBeforeSave: false });
+
+    // Generate reset URL for debug / testing purposes
+    const resetUrl = `${req.protocol}://${req.get('host')}/api/v1/auth/reset-password/${resetToken}`;
+    const logger = req.logger || require('../utils/logger');
+    logger.info(`Password reset link generated for ${email}: ${resetUrl}`);
+
+    await logAudit({
+      userId: user._id,
+      action: 'password_reset_requested',
+      entityType: 'User',
+      entityId: user._id,
+      details: { email },
+      req
+    });
+
+    res.success({
+      message: 'Password reset link generated successfully',
+      resetToken, // Returned for testing purposes since email verification is disabled/deferred
+      resetUrl
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// @desc    Reset password
+// @route   POST /api/v1/auth/reset-password/:token
+// @access  Public
+exports.resetPassword = async (req, res, next) => {
+  try {
+    // Get hashed token
+    const resetPasswordToken = crypto
+      .createHash('sha256')
+      .update(req.params.token)
+      .digest('hex');
+
+    const user = await User.findOne({
+      resetPasswordToken,
+      resetPasswordExpire: { $gt: Date.now() },
+      deletedAt: null
+    });
+
+    if (!user) {
+      return res.status(400).json({
+        success: false,
+        error: 'Invalid or expired password reset token',
+        timestamp: new Date().toISOString()
+      });
+    }
+
+    // Set new password
+    user.password = req.body.password;
+    user.resetPasswordToken = undefined;
+    user.resetPasswordExpire = undefined;
+    await user.save();
+
+    await logAudit({
+      userId: user._id,
+      action: 'password_reset_completed',
+      entityType: 'User',
+      entityId: user._id,
+      details: { email: user.email },
+      req
+    });
+
+    res.success({
+      message: 'Password reset completed successfully. You can now login with your new credentials.'
+    });
   } catch (error) {
     next(error);
   }
