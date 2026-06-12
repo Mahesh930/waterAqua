@@ -251,8 +251,9 @@ exports.forgotPassword = async (req, res, next) => {
 
     await user.save({ validateBeforeSave: false });
 
-    // Generate reset URL for debug / testing purposes
-    const resetUrl = `${req.protocol}://${req.get('host')}/api/v1/auth/reset-password/${resetToken}`;
+    // Generate reset URL pointing to the frontend application
+    const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:8080';
+    const resetUrl = `${frontendUrl}/login?resetToken=${resetToken}`;
     const logger = req.logger || require('../utils/logger');
     logger.info(`Password reset link generated for ${email}: ${resetUrl}`);
 
@@ -266,9 +267,7 @@ exports.forgotPassword = async (req, res, next) => {
     });
 
     res.success({
-      message: 'Password reset link generated successfully',
-      resetToken, // Returned for testing purposes since email verification is disabled/deferred
-      resetUrl
+      message: 'Password reset link generated successfully'
     });
   } catch (error) {
     next(error);

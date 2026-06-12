@@ -72,20 +72,11 @@ export default function Login() {
     }
     try {
       const result = await forgotPassword({ email }).unwrap();
-      
-      // Captured resetToken directly from response for smooth local testing
-      const testToken = result.resetToken;
-      if (testToken) {
-        setTokenInput(testToken);
-      }
 
       toast({
         title: "Reset link generated 🔑",
-        description: result.message || "A reset link has been logged in system server console."
+        description: "Please check your registered email or the system server console for the secure reset link."
       });
-
-      // Transition to reset mode
-      setMode("reset");
     } catch (error) {
       console.error("Forgot password request failed:", error);
       toast({
