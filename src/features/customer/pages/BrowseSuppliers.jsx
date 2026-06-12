@@ -143,7 +143,7 @@ export default function BrowseSuppliers() {
                 placeholder="Pincode" 
                 value={pincodeInput} 
                 onChange={e => setPincodeInput(e.target.value.replace(/\D/g, "").slice(0, 6))} 
-                className="pl-10 rounded-xl h-11 bg-blue-500/5 border-blue-500/10 text-white font-semibold focus-visible:ring-blue-500" 
+                className="pl-10 rounded-xl h-11 bg-blue-500/5 border-blue-500/10 text-slate-100 font-semibold focus-visible:ring-blue-500" 
                 maxLength={6}
               />
             </div>

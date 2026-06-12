@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { useDispatch } from "react-redux";
-import { Droplets, Mail, Lock, Eye, EyeOff, User, Phone, MapPin, Gift } from "lucide-react";
+import { Droplets, Mail, Lock, Eye, EyeOff, User, Phone, MapPin, Gift, Truck } from "lucide-react";
 import { Button } from "@/ui/button";
 import { Input } from "@/ui/input";
 import { Label } from "@/ui/label";
