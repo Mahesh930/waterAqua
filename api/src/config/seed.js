@@ -118,7 +118,7 @@ const seedData = async () => {
     const p1 = await Product.create({
       supplier: supplierUser1._id,
       name: '20L Purified Water Can',
-      category: 'Water Can',
+      category: '20L Can',
       price: 60,
       capacityLiters: 20,
       imageUrl: 'https://images.unsplash.com/photo-1548839140-29a749e1cf4d?q=80&w=300&auto=format&fit=crop',
@@ -129,7 +129,7 @@ const seedData = async () => {
     const p2 = await Product.create({
       supplier: supplierUser1._id,
       name: 'Premium Water Dispenser Stand',
-      category: 'Dispenser',
+      category: '20L Jar',
       price: 250,
       capacityLiters: 0,
       imageUrl: 'https://images.unsplash.com/photo-1585837575652-267c041d77d4?q=80&w=300&auto=format&fit=crop',
@@ -141,7 +141,7 @@ const seedData = async () => {
     const p3 = await Product.create({
       supplier: supplierUser2._id,
       name: 'Bisleri 20L Sealed Can',
-      category: 'Water Can',
+      category: '20L Can',
       price: 90,
       capacityLiters: 20,
       imageUrl: 'https://images.unsplash.com/photo-1548839140-29a749e1cf4d?q=80&w=300&auto=format&fit=crop',
@@ -152,7 +152,7 @@ const seedData = async () => {
     const p4 = await Product.create({
       supplier: supplierUser2._id,
       name: '1L Water Bottles Box (12 Pack)',
-      category: 'Water Bottle',
+      category: 'Bottle',
       price: 180,
       capacityLiters: 12,
       imageUrl: 'https://images.unsplash.com/photo-1608889175123-8ee362201f81?q=80&w=300&auto=format&fit=crop',

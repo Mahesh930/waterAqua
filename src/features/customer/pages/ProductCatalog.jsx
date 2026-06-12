@@ -11,10 +11,10 @@ import { useAuth } from "@/contexts/AuthContext";
 
 const categories = [
   { key: "all", label: "All Products" },
-  { key: "Water Can", label: "Cans (20L)" },
-  { key: "Water Bottle", label: "Bottles" },
-  { key: "Dispenser", label: "Dispensers" },
-  { key: "Other", label: "Accessories" }
+  { key: "20L Can", label: "Cans (20L)" },
+  { key: "Bottle", label: "Bottles" },
+  { key: "20L Jar", label: "Jars (20L)" },
+  { key: "Tanker", label: "Tankers" }
 ];
 
 export default function ProductCatalog() {

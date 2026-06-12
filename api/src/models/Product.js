@@ -15,8 +15,8 @@ const ProductSchema = new mongoose.Schema(
     category: {
       type: String,
       required: [true, 'Please provide a category'],
-      enum: ['Water Can', 'Water Bottle', 'Dispenser', 'Other'],
-      default: 'Water Can'
+      enum: ['20L Can', 'Bottle', '20L Jar', 'Tanker', 'Other'],
+      default: '20L Can'
     },
     price: {
       type: Number,

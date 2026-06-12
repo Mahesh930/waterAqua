@@ -149,7 +149,7 @@ exports.updateMyProfile = async (req, res, next) => {
     if (pCan !== undefined) {
       fieldsToUpdate.pricePerCan = pCan;
       await Product.updateMany(
-        { supplier: req.user.id, category: 'Water Can', isActive: true },
+        { supplier: req.user.id, category: '20L Can', isActive: true },
         { $set: { price: pCan } }
       );
     }

@@ -1,6 +1,7 @@
 const User = require('../models/User');
 const Supplier = require('../models/Supplier');
 const jwt = require('jsonwebtoken');
+const crypto = require('crypto');
 const { logAudit } = require('../utils/auditLogger');
 
 // Helper to generate and sign JWT token
@@ -18,8 +19,12 @@ exports.register = async (req, res, next) => {
     const { name, email, password, phone, role, pincode, address, businessName, referredByCode } = req.body;
 
     // Check if user already exists
+    const log = req.logger || require('../utils/logger');
+    log.info({ email, role, name, phone }, '[REGISTER] Attempt received');
+
     const userExists = await User.findOne({ email });
     if (userExists) {
+      log.warn({ email }, '[REGISTER] Failed — duplicate email');
       return res.status(400).json({
         success: false,
         error: 'A user with this email address already exists',
@@ -77,11 +82,15 @@ exports.register = async (req, res, next) => {
       req
     });
 
+    log.info({ userId: user._id, email: user.email, role: user.role }, '[REGISTER] Success — new user created');
+
     res.success({
       token,
       user: userResponse
     }, 201);
   } catch (error) {
+    const log = req.logger || require('../utils/logger');
+    log.error({ err: error.message, email: req.body?.email }, '[REGISTER] Unexpected error');
     next(error);
   }
 };
@@ -92,9 +101,12 @@ exports.register = async (req, res, next) => {
 exports.login = async (req, res, next) => {
   try {
     const { email, password } = req.body;
+    const log = req.logger || require('../utils/logger');
+    log.info({ email }, '[LOGIN] Attempt received');
 
     // Validate email & password inputs
     if (!email || !password) {
+      log.warn({ email: email || '(empty)' }, '[LOGIN] Failed — missing email or password');
       return res.status(400).json({
         success: false,
         error: 'Please provide email and password',
@@ -105,6 +117,7 @@ exports.login = async (req, res, next) => {
     // Check user in database (explicitly select password)
     const user = await User.findOne({ email, deletedAt: null }).select('+password');
     if (!user) {
+      log.warn({ email }, '[LOGIN] Failed — user not found in database');
       return res.status(401).json({
         success: false,
         error: 'Invalid email or password credentials',
@@ -115,6 +128,7 @@ exports.login = async (req, res, next) => {
     // Verify password matches hashed one
     const isMatch = await user.matchPassword(password);
     if (!isMatch) {
+      log.warn({ email }, '[LOGIN] Failed — incorrect password');
       return res.status(401).json({
         success: false,
         error: 'Invalid email or password credentials',
@@ -123,6 +137,7 @@ exports.login = async (req, res, next) => {
     }
 
     if (user.status === 'suspended') {
+      log.warn({ email, userId: user._id }, '[LOGIN] Failed — account suspended');
       return res.status(403).json({
         success: false,
         error: 'Your account is currently suspended.',
@@ -145,11 +160,15 @@ exports.login = async (req, res, next) => {
       req
     });
 
+    log.info({ userId: user._id, email: user.email, role: user.role }, '[LOGIN] Success');
+
     res.success({
       token,
       user: userResponse
     });
   } catch (error) {
+    const log = req.logger || require('../utils/logger');
+    log.error({ err: error.message, email: req.body?.email }, '[LOGIN] Unexpected error');
     next(error);
   }
 };

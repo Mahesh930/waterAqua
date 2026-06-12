@@ -40,7 +40,7 @@ const updateOrderStatusSchema = z.object({
 
 const verifyOtpSchema = z.object({
   body: z.object({
-    otp: z.string().length(6, 'OTP must be exactly 6 digits')
+    otp: z.string().length(4, 'OTP must be exactly 4 digits')
   })
 });
 
@@ -58,6 +58,7 @@ const createProductSchema = z.object({
     description: z.string().optional(),
     price: z.number().positive('Price must be greater than zero'),
     category: z.string().min(1, 'Category is required'),
+    capacityLiters: z.number().nonnegative('Capacity cannot be negative'),
     stock: z.number().int().nonnegative('Stock cannot be negative'),
     imageUrl: z.string().url('Image URL must be valid').optional().or(z.literal(''))
   })
@@ -69,6 +70,7 @@ const updateProductSchema = z.object({
     description: z.string().optional(),
     price: z.number().positive().optional(),
     category: z.string().optional(),
+    capacityLiters: z.number().nonnegative('Capacity cannot be negative').optional(),
     stock: z.number().int().nonnegative().optional(),
     imageUrl: z.string().url().optional().or(z.literal('')),
     isActive: z.boolean().optional()

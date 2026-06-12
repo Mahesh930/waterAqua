@@ -135,6 +135,14 @@ export const api = createApi({
       transformResponse: (response) => response.data,
       providesTags: (result, error, id) => [{ type: 'Product', id }],
     }),
+    uploadProductImage: builder.mutation({
+      query: (formData) => ({
+        url: '/products/upload',
+        method: 'POST',
+        body: formData,
+      }),
+      transformResponse: (response) => response.data,
+    }),
     createProduct: builder.mutation({
       query: (body) => ({
         url: '/products',
@@ -334,6 +342,7 @@ export const {
   useGetProductsQuery,
   useGetProductByIdQuery,
   useCreateProductMutation,
+  useUploadProductImageMutation,
   useUpdateProductMutation,
   useDeleteProductMutation,
   useGetCartQuery,

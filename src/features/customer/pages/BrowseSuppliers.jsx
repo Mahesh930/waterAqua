@@ -216,7 +216,7 @@ export default function BrowseSuppliers() {
                   variants={item}
                   whileHover={{ y: -4, transition: { duration: 0.2 } }}
                   className="bg-[#0e142e]/80 border border-white/5 rounded-2xl overflow-hidden shadow-lg hover:shadow-2xl hover:border-blue-500/15 transition-all duration-300 group cursor-pointer"
-                  onClick={() => navigate(`/customer/products?supplier=${s.user?.id || s.user}`)}
+                  onClick={() => navigate(`/customer/products?supplier=${s.user?._id || s.user?.id || s.user}`)}
                 >
                   {/* Card Banner */}
                   <div className="h-16 bg-gradient-to-r from-blue-500/10 via-sky-500/5 to-transparent p-4 flex items-center justify-between">

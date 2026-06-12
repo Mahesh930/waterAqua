@@ -2,6 +2,7 @@ import { createContext, useContext, useEffect, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { logout, setCredentials } from "../store/authSlice";
 import { api } from "@/store/api";
+import { toast } from "sonner";
 
 const AuthContext = createContext({
   session: null,
@@ -39,7 +40,10 @@ export function AuthProvider({ children }) {
             dispatch(setCredentials({ token: savedToken, user: freshData.user }));
           }
         } catch (e) {
-          console.error("Session revalidation failed:", e);
+          console.warn("[AuthContext] Session revalidation failed:", e?.data?.error || e?.message || e);
+          toast.error("Session expired", {
+            description: "Your previous session is no longer valid. Please log in again.",
+          });
           dispatch(logout());
         }
       }

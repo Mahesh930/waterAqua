@@ -106,8 +106,8 @@ exports.createOrder = async (req, res, next) => {
       }
     }
 
-    // Generate secure 6-digit OTP for delivery verification
-    const otp = crypto.randomInt(100000, 999999).toString();
+    // Generate secure 4-digit OTP for delivery verification
+    const otp = crypto.randomInt(0, 10000).toString().padStart(4, '0');
     const otpExpiresAt = new Date(Date.now() + 60 * 60 * 1000); // 1 hour expiry
 
     // Generate unique Razorpay Order ID for online payments

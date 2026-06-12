@@ -17,6 +17,9 @@ const validate = (schema) => (req, res, next) => {
       ? error.errors.map((e) => `${e.path.join('.').replace(/^(body|query|params)\./, '')}: ${e.message}`).join(', ')
       : error.message;
 
+    const log = req.logger || require('../utils/logger');
+    log.warn({ route: `${req.method} ${req.originalUrl}`, validationErrors: errorMessage, body: { ...req.body, password: req.body?.password ? '***' : undefined } }, '[VALIDATION] Request rejected');
+
     return res.status(400).json({
       success: false,
       error: errorMessage,
@@ -26,3 +29,4 @@ const validate = (schema) => (req, res, next) => {
 };
 
 module.exports = validate;
+

@@ -10,8 +10,8 @@ export function getDefaultProductImage(product) {
   const category = (product.category || "").toLowerCase();
   const sizeLiters = Number(product.capacityLiters ?? product.capacity_liters ?? product.size_liters ?? 0);
 
-  if (category === "jar") return productImagePaths.jar15L;
-  if (category === "can" || category === "water can") return productImagePaths.can20L;
+  if (category === "jar" || category === "20l jar") return productImagePaths.jar15L;
+  if (category === "can" || category === "water can" || category === "20l can") return productImagePaths.can20L;
   if (category === "bottle" || category === "water bottle") return productImagePaths.bottle1L;
   if (category === "tanker" || category === "dispenser") return productImagePaths.tanker5K10K;
 

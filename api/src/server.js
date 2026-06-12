@@ -66,6 +66,9 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(morgan('dev'));
 
+// Serve uploads statically
+app.use('/uploads', express.static(require('path').join(__dirname, '../uploads')));
+
 // Custom response helper middleware
 app.use(responseHelper);
 

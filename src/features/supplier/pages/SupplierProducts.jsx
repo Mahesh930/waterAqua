@@ -5,25 +5,25 @@ import { Button } from "@/ui/button";
 import { Switch } from "@/ui/switch";
 import { Badge } from "@/ui/badge";
 import { Textarea } from "@/ui/textarea";
-import { Plus, Pencil, Trash2, Package, X, Save } from "lucide-react";
+import { Plus, Pencil, Trash2, Package, X, Save, Upload, Image as ImageIcon, Loader2 } from "lucide-react";
 import { useToast } from "@/shared/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
-import { useGetProductsQuery, useCreateProductMutation, useUpdateProductMutation, useDeleteProductMutation } from "@/store/api";
+import { useGetProductsQuery, useCreateProductMutation, useUpdateProductMutation, useDeleteProductMutation, useUploadProductImageMutation } from "@/store/api";
 import { motion, AnimatePresence } from "framer-motion";
 
 const container = { hidden: {}, show: { transition: { staggerChildren: 0.06 } } };
 const item = { hidden: { opacity: 0, y: 20 }, show: { opacity: 1, y: 0 } };
 
 const categoryOptions = [
-  { value: "Water Can", label: "🪣 Can (20L)" },
-  { value: "Water Bottle", label: "🍶 Bottle" },
-  { value: "Dispenser", label: "🫙 Dispenser" },
-  { value: "Other", label: "🔧 Accessory" },
+  { value: "20L Can", label: "🪣 Can (20L)" },
+  { value: "Bottle", label: "🍶 Bottle" },
+  { value: "20L Jar", label: "🫙 Jar (20L)" },
+  { value: "Tanker", label: "🚛 Tanker" },
 ];
 
 const emptyProduct = {
   name: "",
-  category: "Water Can",
+  category: "20L Can",
   price: 60,
   capacityLiters: 20,
   imageUrl: "",
@@ -49,6 +49,32 @@ export default function SupplierProducts() {
   const [createProduct, { isLoading: adding }] = useCreateProductMutation();
   const [updateProduct, { isLoading: saving }] = useUpdateProductMutation();
   const [deleteProduct] = useDeleteProductMutation();
+  const [uploadProductImage, { isLoading: uploading }] = useUploadProductImageMutation();
+
+  const handleImageUpload = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    if (!file.type.startsWith("image/")) {
+      toast({ title: "Invalid file type", description: "Please upload an image file", variant: "destructive" });
+      return;
+    }
+
+    const formData = new FormData();
+    formData.append("image", file);
+
+    try {
+      const result = await uploadProductImage(formData).unwrap();
+      setForm(prev => ({ ...prev, imageUrl: result.url }));
+      toast({ title: "Image uploaded successfully 📸" });
+    } catch (err) {
+      toast({
+        title: "Upload failed",
+        description: err?.data?.error || "Error uploading image",
+        variant: "destructive"
+      });
+    }
+  };
 
   const filteredProducts = useMemo(() => {
     if (filter === "all") return products;
@@ -136,8 +162,9 @@ export default function SupplierProducts() {
   };
 
   const catIcon = (cat) => {
-    if (cat === "Water Bottle") return "🍶";
-    if (cat === "Dispenser") return "🫙";
+    if (cat === "Bottle") return "🍶";
+    if (cat === "20L Jar") return "🫙";
+    if (cat === "Tanker") return "🚛";
     if (cat === "Other") return "🔧";
     return "🪣";
   };
@@ -164,7 +191,7 @@ export default function SupplierProducts() {
           { label: "Total Items", value: products.length, color: "text-blue-400" },
           { label: "Active Items", value: products.filter(p => p.isActive).length, color: "text-emerald-400" },
           { label: "Out of Stock", value: products.filter(p => p.stock === 0).length, color: "text-red-400" },
-          { label: "Water Cans", value: products.filter(p => p.category === "Water Can").length, color: "text-amber-400" },
+          { label: "Water Cans", value: products.filter(p => p.category === "20L Can").length, color: "text-amber-400" },
         ].map(s => (
           <div key={s.label} className="p-4 bg-[#0e142e]/60 border border-white/5 rounded-2xl text-center shadow-md">
             <p className={`text-2xl font-black ${s.color}`}>{s.value}</p>
@@ -230,7 +257,7 @@ export default function SupplierProducts() {
                   <Label className="text-slate-300">Category</Label>
                   <select
                     value={form.category}
-                    onChange={e => setForm({ ...form, category: e.target.value, capacityLiters: e.target.value === "Water Can" ? 20 : 1 })}
+                    onChange={e => setForm({ ...form, category: e.target.value, capacityLiters: (e.target.value === "20L Can" || e.target.value === "20L Jar") ? 20 : e.target.value === "Tanker" ? 5000 : 1 })}
                     className="w-full mt-1 px-3.5 rounded-xl h-11 bg-[#090d22] border border-white/5 text-white text-sm font-semibold focus-visible:ring-blue-500"
                   >
                     {categoryOptions.map(c => <option key={c.value} value={c.value} className="bg-[#0e142e] text-white font-medium">{c.label}</option>)}
@@ -266,14 +293,75 @@ export default function SupplierProducts() {
                     required
                   />
                 </div>
-                <div>
-                  <Label className="text-slate-300">Image URL</Label>
-                  <Input 
-                    className="mt-1 rounded-xl bg-[#090d22] border-white/5 text-white focus-visible:ring-blue-500" 
-                    placeholder="https://images.unsplash.com/..."
-                    value={form.imageUrl} 
-                    onChange={e => setForm({ ...form, imageUrl: e.target.value })} 
-                  />
+                <div className="sm:col-span-2">
+                  <Label className="text-slate-300">Product Image</Label>
+                  <div className="mt-1.5 flex flex-col md:flex-row gap-4 items-start">
+                    {/* Upload Card / Preview */}
+                    <div className="relative w-full md:w-48 h-32 rounded-xl bg-[#090d22] border border-dashed border-white/10 hover:border-blue-500/50 flex flex-col items-center justify-center overflow-hidden transition-all group">
+                      {form.imageUrl ? (
+                        <>
+                          <img 
+                            src={form.imageUrl} 
+                            alt="Preview" 
+                            className="h-full w-full object-cover group-hover:scale-105 transition-transform duration-300"
+                          />
+                          <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity gap-2">
+                            <button
+                              type="button"
+                              onClick={() => document.getElementById("product-image-file").click()}
+                              className="p-1.5 rounded-lg bg-blue-600 text-white hover:bg-blue-500 transition-colors"
+                            >
+                              <Upload className="h-4 w-4" />
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => setForm(prev => ({ ...prev, imageUrl: "" }))}
+                              className="p-1.5 rounded-lg bg-red-600 text-white hover:bg-red-500 transition-colors"
+                            >
+                              <X className="h-4 w-4" />
+                            </button>
+                          </div>
+                        </>
+                      ) : (
+                        <button
+                          type="button"
+                          disabled={uploading}
+                          onClick={() => document.getElementById("product-image-file").click()}
+                          className="w-full h-full flex flex-col items-center justify-center p-4 text-slate-400 hover:text-white transition-colors"
+                        >
+                          {uploading ? (
+                            <Loader2 className="h-6 w-6 animate-spin text-blue-400 mb-2" />
+                          ) : (
+                            <Upload className="h-6 w-6 text-blue-400 mb-2 group-hover:-translate-y-0.5 transition-transform" />
+                          )}
+                          <span className="text-xs font-bold">{uploading ? "Uploading..." : "Upload Image"}</span>
+                          <span className="text-[10px] text-slate-500 mt-1">PNG, JPG up to 5MB</span>
+                        </button>
+                      )}
+                      <input 
+                        id="product-image-file"
+                        type="file"
+                        accept="image/*"
+                        className="hidden"
+                        onChange={handleImageUpload}
+                        disabled={uploading}
+                      />
+                    </div>
+
+                    {/* Manual Image URL (optional/flexible fallback) */}
+                    <div className="flex-1 w-full space-y-2">
+                      <Label className="text-xs text-slate-400">Or paste an Image URL manually</Label>
+                      <Input 
+                        className="rounded-xl bg-[#090d22] border-white/5 text-white focus-visible:ring-blue-500 text-xs h-10" 
+                        placeholder="https://images.unsplash.com/..."
+                        value={form.imageUrl} 
+                        onChange={e => setForm({ ...form, imageUrl: e.target.value })} 
+                      />
+                      <p className="text-[10px] text-slate-500 leading-normal">
+                        Tip: Uploading a direct, high-quality image of your water can will attract more customer orders.
+                      </p>
+                    </div>
+                  </div>
                 </div>
                 <div className="sm:col-span-2">
                   <Label className="text-slate-300">Product Description</Label>

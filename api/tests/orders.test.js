@@ -129,7 +129,7 @@ describe('Orders Controller Tests', () => {
         ],
         totalAmount: 100,
         status: 'placed',
-        otp: '123456',
+        otp: '1234',
         toObject: function() { return this; },
         save: jest.fn().mockResolvedValue(true)
       };
@@ -289,7 +289,7 @@ describe('Orders Controller Tests', () => {
         customer: 'customer_123',
         supplier: 'supplier_123',
         status: 'confirmed',
-        otp: '123456',
+        otp: '1234',
         otpAttempts: 0,
         otpExpiresAt: new Date(Date.now() + 600000), // active
         paymentMethod: 'cod',
@@ -309,7 +309,7 @@ describe('Orders Controller Tests', () => {
 
       const res = await request(app)
         .post('/api/v1/orders/order_123/verify-otp')
-        .send({ otp: '123456' });
+        .send({ otp: '1234' });
 
       expect(res.status).toBe(200);
       expect(res.body.success).toBe(true);
@@ -329,7 +329,7 @@ describe('Orders Controller Tests', () => {
 
       const res = await request(app)
         .post('/api/v1/orders/order_123/verify-otp')
-        .send({ otp: '123456' });
+        .send({ otp: '1234' });
 
       expect(res.status).toBe(400);
       expect(res.body.error).toContain('attempts exceeded');
@@ -347,7 +347,7 @@ describe('Orders Controller Tests', () => {
 
       const res = await request(app)
         .post('/api/v1/orders/order_123/verify-otp')
-        .send({ otp: '123456' });
+        .send({ otp: '1234' });
 
       expect(res.status).toBe(400);
       expect(res.body.error).toContain('OTP has expired');
@@ -357,7 +357,7 @@ describe('Orders Controller Tests', () => {
       const mockOrder = {
         _id: 'order_123',
         supplier: 'supplier_123',
-        otp: '123456',
+        otp: '1234',
         otpAttempts: 1,
         otpExpiresAt: new Date(Date.now() + 600000),
         save: jest.fn().mockResolvedValue(true)
@@ -367,7 +367,7 @@ describe('Orders Controller Tests', () => {
 
       const res = await request(app)
         .post('/api/v1/orders/order_123/verify-otp')
-        .send({ otp: '999999' }); // incorrect
+        .send({ otp: '9999' }); // incorrect
 
       expect(res.status).toBe(400);
       expect(mockOrder.otpAttempts).toBe(2);

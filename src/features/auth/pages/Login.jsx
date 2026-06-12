@@ -54,6 +54,7 @@ export default function Login() {
       else if (user.role === "supplier") navigate("/supplier");
       else if (user.role === "admin") navigate("/admin");
     } catch (error) {
+      console.error("Login failed:", error);
       const errMsg = error?.data?.error || error?.message || "Invalid credentials. Try again.";
       toast({ 
         title: "Login failed", 
@@ -86,6 +87,7 @@ export default function Login() {
       // Transition to reset mode
       setMode("reset");
     } catch (error) {
+      console.error("Forgot password request failed:", error);
       toast({
         title: "Request failed",
         description: error?.data?.error || error?.message || "User not found or database error",
@@ -122,6 +124,7 @@ export default function Login() {
       setTokenInput("");
       setMode("login");
     } catch (error) {
+      console.error("Reset password failed:", error);
       toast({
         title: "Reset failed",
         description: error?.data?.error || error?.message || "Invalid or expired reset token",

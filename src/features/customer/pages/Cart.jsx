@@ -55,37 +55,37 @@ export default function Cart() {
     if (items.length === 0) return;
 
     if (!address.trim() || address.trim().length < 8) {
-      toast({ 
-        title: "Address too short", 
-        description: "Please enter a complete delivery address.", 
-        variant: "destructive" 
+      toast({
+        title: "Address too short",
+        description: "Please enter a complete delivery address.",
+        variant: "destructive"
       });
       return;
     }
 
     if (!pincode || pincode.length !== 6) {
-      toast({ 
-        title: "Invalid Pincode", 
-        description: "Please enter a valid 6-digit delivery pincode.", 
-        variant: "destructive" 
+      toast({
+        title: "Invalid Pincode",
+        description: "Please enter a valid 6-digit delivery pincode.",
+        variant: "destructive"
       });
       return;
     }
 
     if (!phone || phone.length < 10) {
-      toast({ 
-        title: "Invalid Phone", 
-        description: "Please enter a valid contact phone number.", 
-        variant: "destructive" 
+      toast({
+        title: "Invalid Phone",
+        description: "Please enter a valid contact phone number.",
+        variant: "destructive"
       });
       return;
     }
 
     if (!deliveryDate) {
-      toast({ 
-        title: "Delivery Date Required", 
-        description: "Please select a date for your water delivery.", 
-        variant: "destructive" 
+      toast({
+        title: "Delivery Date Required",
+        description: "Please select a date for your water delivery.",
+        variant: "destructive"
       });
       return;
     }
@@ -153,18 +153,18 @@ export default function Cart() {
         });
         rzp.open();
       } else {
-        toast({ 
-          title: "🎉 Order Placed!", 
-          description: "Your Cash on Delivery water order has been successfully generated." 
+        toast({
+          title: "🎉 Order Placed!",
+          description: "Your Cash on Delivery water order has been successfully generated."
         });
         navigate("/customer/track");
       }
     } catch (error) {
       const errMsg = error?.data?.error || error?.message || "Checkout failed. Try again.";
-      toast({ 
-        title: "Checkout failed", 
-        description: errMsg, 
-        variant: "destructive" 
+      toast({
+        title: "Checkout failed",
+        description: errMsg,
+        variant: "destructive"
       });
     }
   };
@@ -218,10 +218,10 @@ export default function Cart() {
           <div className="space-y-6">
             <div className="flex items-center justify-between">
               <h3 className="text-xl font-bold text-white tracking-tight">Scheduled Items</h3>
-              <Button 
+              <Button
                 type="button"
-                variant="ghost" 
-                size="sm" 
+                variant="ghost"
+                size="sm"
                 className="text-red-400 hover:text-red-300 hover:bg-white/5 rounded-xl font-semibold text-xs"
                 onClick={() => clearCart.mutate()}
               >
@@ -233,17 +233,17 @@ export default function Cart() {
             <div className="p-5 bg-[#0e142e]/60 border border-white/5 rounded-2xl shadow-lg space-y-4">
               <AnimatePresence mode="popLayout">
                 {items.map(ci => (
-                  <motion.div 
-                    key={ci.id} 
-                    layout 
+                  <motion.div
+                    key={ci.id}
+                    layout
                     exit={{ opacity: 0, x: -30 }}
                     className="flex items-center gap-4 py-3 border-b last:border-0 border-white/5"
                   >
                     <div className="h-14 w-14 rounded-xl bg-[#090d22] flex items-center justify-center shrink-0 border border-white/5 overflow-hidden">
-                      <img 
-                        src={ci.product?.image_url || "https://images.unsplash.com/photo-1548839140-29a749e1cf4d?q=80&w=300&auto=format&fit=crop"} 
-                        alt={ci.product?.name} 
-                        className="h-full w-full object-cover" 
+                      <img
+                        src={ci.product?.image_url || "https://images.unsplash.com/photo-1548839140-29a749e1cf4d?q=80&w=300&auto=format&fit=crop"}
+                        alt={ci.product?.name}
+                        className="h-full w-full object-cover"
                       />
                     </div>
                     <div className="flex-1 min-w-0">
@@ -252,20 +252,20 @@ export default function Cart() {
                       <p className="text-sm font-bold text-blue-400 mt-1">₹{(ci.product?.price ?? 0) * ci.quantity}</p>
                     </div>
                     <div className="flex items-center gap-1.5 bg-[#090d22] border border-white/5 rounded-xl p-1 shrink-0">
-                      <Button 
-                        type="button" 
-                        variant="ghost" 
-                        size="icon" 
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
                         className="h-7 w-7 rounded-lg hover:bg-white/5 text-slate-400"
                         onClick={() => updateQty.mutate({ itemId: ci.id, quantity: ci.quantity - 1 })}
                       >
                         <Minus className="h-3.5 w-3.5" />
                       </Button>
                       <span className="w-6 text-center font-bold text-sm text-white">{ci.quantity}</span>
-                      <Button 
-                        type="button" 
-                        variant="ghost" 
-                        size="icon" 
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
                         className="h-7 w-7 rounded-lg hover:bg-white/5 text-slate-400"
                         onClick={() => updateQty.mutate({ itemId: ci.id, quantity: ci.quantity + 1 })}
                       >
@@ -291,13 +291,13 @@ export default function Cart() {
                   <Label htmlFor="address" className="text-slate-300">Delivery Address</Label>
                   <div className="relative mt-1">
                     <MapPin className="absolute left-3.5 top-3.5 h-4 w-4 text-slate-500" />
-                    <Textarea 
+                    <Textarea
                       id="address"
                       placeholder="Enter flat number, wing, building, street landmark..."
-                      value={address} 
+                      value={address}
                       onChange={e => setAddress(e.target.value)}
-                      className="pl-10 rounded-xl bg-[#090d22] border-white/5 text-white placeholder-slate-600 focus-visible:ring-blue-500 resize-none" 
-                      rows={3} 
+                      className="pl-10 rounded-xl bg-[#090d22] border-white/5 text-white placeholder-slate-600 focus-visible:ring-blue-500 resize-none"
+                      rows={3}
                       required
                     />
                   </div>
@@ -308,13 +308,13 @@ export default function Cart() {
                     <Label htmlFor="pincode" className="text-slate-300">6-Digit Pincode</Label>
                     <div className="relative mt-1">
                       <Tag className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-500" />
-                      <Input 
+                      <Input
                         id="pincode"
-                        placeholder="411001" 
-                        value={pincode} 
+                        placeholder="411001"
+                        value={pincode}
                         maxLength={6}
                         onChange={e => setPincode(e.target.value.replace(/\D/g, "").slice(0, 6))}
-                        className="pl-10 rounded-xl bg-[#090d22] border-white/5 text-white focus-visible:ring-blue-500" 
+                        className="pl-10 rounded-xl bg-[#090d22] border-white/5 text-white focus-visible:ring-blue-500"
                         required
                       />
                     </div>
@@ -323,12 +323,12 @@ export default function Cart() {
                     <Label htmlFor="phone" className="text-slate-300">Contact Number</Label>
                     <div className="relative mt-1">
                       <Phone className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-500" />
-                      <Input 
+                      <Input
                         id="phone"
-                        placeholder="9876543210" 
+                        placeholder="9876543210"
                         value={phone}
                         onChange={e => setPhone(e.target.value.replace(/\D/g, "").slice(0, 12))}
-                        className="pl-10 rounded-xl bg-[#090d22] border-white/5 text-white focus-visible:ring-blue-500" 
+                        className="pl-10 rounded-xl bg-[#090d22] border-white/5 text-white focus-visible:ring-blue-500"
                         required
                       />
                     </div>
@@ -340,13 +340,13 @@ export default function Cart() {
                     <Label htmlFor="date" className="text-slate-300">Delivery Date</Label>
                     <div className="relative mt-1">
                       <Calendar className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-500" />
-                      <Input 
+                      <Input
                         id="date"
                         type="date"
                         value={deliveryDate}
                         onChange={e => setDeliveryDate(e.target.value)}
                         min={new Date().toISOString().split("T")[0]}
-                        className="pl-10 rounded-xl bg-[#090d22] border-white/5 text-white focus-visible:ring-blue-500" 
+                        className="pl-10 rounded-xl bg-[#090d22] border-white/5 text-white focus-visible:ring-blue-500"
                         required
                       />
                     </div>
@@ -354,8 +354,8 @@ export default function Cart() {
                   <div>
                     <Label className="text-slate-300">Preferred Time Window</Label>
                     <div className="relative mt-1">
-                      <select 
-                        value={deliveryTimeSlot} 
+                      <select
+                        value={deliveryTimeSlot}
                         onChange={e => setDeliveryTimeSlot(e.target.value)}
                         className="w-full pl-3.5 pr-10 rounded-xl h-11 bg-[#090d22] border border-white/5 text-white text-sm font-semibold focus-visible:ring-blue-500"
                       >
@@ -369,13 +369,13 @@ export default function Cart() {
 
                 <div>
                   <Label htmlFor="notes" className="text-slate-300">Delivery Instruction Notes (optional)</Label>
-                  <Textarea 
+                  <Textarea
                     id="notes"
                     placeholder="Leave jar near door, call before arriving, etc..."
-                    value={notes} 
+                    value={notes}
                     onChange={e => setNotes(e.target.value)}
-                    className="rounded-xl bg-[#090d22] border-white/5 text-white placeholder-slate-600 focus-visible:ring-blue-500 resize-none mt-1" 
-                    rows={2} 
+                    className="rounded-xl bg-[#090d22] border-white/5 text-white placeholder-slate-600 focus-visible:ring-blue-500 resize-none mt-1"
+                    rows={2}
                   />
                 </div>
               </div>
@@ -386,7 +386,7 @@ export default function Cart() {
           <div className="lg:sticky lg:top-20 space-y-4">
             <div className="p-6 bg-[#0e142e]/60 border border-white/5 rounded-2xl shadow-lg ring-1 ring-blue-500/10 space-y-5">
               <h3 className="font-bold text-lg text-white">Order Summary</h3>
-              
+
               <div className="space-y-2.5 text-sm">
                 <div className="flex justify-between">
                   <span className="text-slate-400 font-semibold">Subtotal</span>
@@ -414,11 +414,10 @@ export default function Cart() {
                       key={method.key}
                       type="button"
                       onClick={() => setPaymentMethod(method.key)}
-                      className={`flex-1 py-2.5 rounded-xl text-xs font-bold border transition-colors ${
-                        paymentMethod === method.key 
-                          ? "bg-blue-600/10 border-blue-500 text-blue-300" 
+                      className={`flex-1 py-2.5 rounded-xl text-xs font-bold border transition-colors ${paymentMethod === method.key
+                          ? "bg-blue-600/10 border-blue-500 text-blue-300"
                           : "bg-[#090d22] border-white/5 text-slate-400 hover:text-white"
-                      }`}
+                        }`}
                     >
                       {method.label}
                     </button>
@@ -434,10 +433,10 @@ export default function Cart() {
                 </div>
               </div>
 
-              <Button 
+              <Button
                 type="submit"
                 className="w-full py-6 rounded-xl text-sm font-bold gap-2 bg-gradient-to-r from-blue-600 to-sky-500 hover:from-blue-500 hover:to-sky-400 text-white shadow-xl shadow-blue-500/20 border-0"
-                disabled={placing} 
+                disabled={placing}
               >
                 {placing ? "Processing..." : <>Place Hydration Order <ArrowRight className="h-4 w-4" /></>}
               </Button>

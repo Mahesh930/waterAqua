@@ -13,6 +13,8 @@ const protect = async (req, res, next) => {
   }
 
   if (!token) {
+    const log = req.logger || require('../utils/logger');
+    log.warn({ route: `${req.method} ${req.originalUrl}` }, '[AUTH] Rejected — no token provided');
     return res.status(401).json({
       success: false,
       error: 'Not authorized to access this route. Token is missing.',
@@ -28,6 +30,8 @@ const protect = async (req, res, next) => {
     const user = await User.findById(decoded.id);
 
     if (!user) {
+      const log = req.logger || require('../utils/logger');
+      log.warn({ decodedId: decoded.id }, '[AUTH] Rejected — user no longer exists in database');
       return res.status(401).json({
         success: false,
         error: 'The user belonging to this token no longer exists.',
@@ -36,6 +40,8 @@ const protect = async (req, res, next) => {
     }
 
     if (user.status === 'suspended') {
+      const log = req.logger || require('../utils/logger');
+      log.warn({ userId: user._id, email: user.email }, '[AUTH] Rejected — account suspended');
       return res.status(403).json({
         success: false,
         error: 'Your account is suspended. Contact admin support.',
@@ -47,6 +53,8 @@ const protect = async (req, res, next) => {
     req.user = user;
     next();
   } catch (error) {
+    const log = req.logger || require('../utils/logger');
+    log.warn({ err: error.message }, '[AUTH] Rejected — invalid or expired token');
     return res.status(401).json({
       success: false,
       error: 'Not authorized to access this route. Invalid or expired token.',

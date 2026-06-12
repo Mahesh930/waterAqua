@@ -61,7 +61,8 @@ export default function Register() {
         role,
         pincode,
         address,
-        businessName: role === "supplier" ? businessName : undefined
+        businessName: role === "supplier" ? businessName : undefined,
+        referredByCode: referralInput || undefined
       };
 
       const result = await register(payload).unwrap();
@@ -77,6 +78,7 @@ export default function Register() {
       else if (user.role === "supplier") navigate("/supplier");
       else if (user.role === "admin") navigate("/admin");
     } catch (error) {
+      console.error("[Register] Failed:", error?.data?.error || error?.message || error);
       const errMsg = error?.data?.error || error?.message || "Registration failed. Check inputs.";
       toast({ 
         title: "Registration failed", 
