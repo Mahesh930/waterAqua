@@ -31,21 +31,38 @@ const app = express();
 const server = http.createServer(app);
 
 // CORS configuration options
-const allowedOrigins = ['http://localhost:5173', 'http://localhost:8080', 'http://localhost:3000'];
+const allowedOrigins = ['http://localhost:5173', 'http://localhost:8080', 'http://localhost:3000','https://water-aqua-zze6.vercel.app'];
 
-// Load dynamically allowed origins from environment variable
-if (process.env.CORS_ORIGIN) {
-  const envOrigins = process.env.CORS_ORIGIN.split(',').map(origin => origin.trim());
-  allowedOrigins.push(...envOrigins);
-}
+// Load dynamically allowed origins from environment variables
+const addOrigins = (envVal) => {
+  if (envVal) {
+    envVal.split(',').forEach(val => {
+      const trimmed = val.trim();
+      if (trimmed && !allowedOrigins.includes(trimmed)) {
+        allowedOrigins.push(trimmed);
+      }
+    });
+  }
+};
+addOrigins(process.env.CORS_ORIGIN);
+addOrigins(process.env.FRONTEND_URL);
 
 const corsOptions = {
   origin: (origin, callback) => {
     // Allow requests with no origin (like mobile apps, curl, or tool execution)
     if (!origin) return callback(null, true);
-    if (allowedOrigins.includes(origin) || origin.startsWith('http://localhost:')) {
+    
+    const normalizedOrigin = origin.replace(/\/$/, '').toLowerCase();
+    const isAllowed = allowedOrigins.some(allowed => {
+      const normalizedAllowed = allowed.replace(/\/$/, '').toLowerCase();
+      return normalizedAllowed === normalizedOrigin;
+    }) || origin.startsWith('http://localhost:');
+
+    if (isAllowed) {
       return callback(null, true);
     }
+
+    console.warn(`[CORS Blocked] Request origin: "${origin}". Allowed origins: ${allowedOrigins.join(', ')}`);
     return callback(new Error('Not allowed by CORS'));
   },
   methods: ['GET', 'POST', 'PATCH', 'PUT', 'DELETE'],
