@@ -32,6 +32,13 @@ const server = http.createServer(app);
 
 // CORS configuration options
 const allowedOrigins = ['http://localhost:5173', 'http://localhost:8080', 'http://localhost:3000'];
+
+// Load dynamically allowed origins from environment variable
+if (process.env.CORS_ORIGIN) {
+  const envOrigins = process.env.CORS_ORIGIN.split(',').map(origin => origin.trim());
+  allowedOrigins.push(...envOrigins);
+}
+
 const corsOptions = {
   origin: (origin, callback) => {
     // Allow requests with no origin (like mobile apps, curl, or tool execution)
