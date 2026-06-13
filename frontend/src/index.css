@@ -334,5 +334,31 @@
   .text-white\/60 {
     color: hsla(var(--foreground) / 0.6) !important;
   }
+
+  /* Make outline and secondary buttons look amazing on hover in light mode */
+  .bg-\[\#0e142e\]:hover,
+  .bg-\[\#090d22\]:hover,
+  .bg-white\/5:hover,
+  .hover\:bg-white\/5:hover {
+    background-color: hsl(var(--muted)) !important;
+  }
+
+  button.bg-\[\#0e142e\]:hover,
+  button.bg-\[\#090d22\]:hover,
+  button.bg-white\/5:hover,
+  button.hover\:bg-white\/5:hover,
+  button.bg-transparent:hover {
+    color: hsl(var(--foreground)) !important;
+  }
+
+  /* Target any hover:text-white on standard light background buttons to ensure it stays dark */
+  button.bg-\[\#0e142e\].hover\:text-white:hover,
+  button.bg-\[\#090d22\].hover\:text-white:hover,
+  button.bg-white\/5.hover\:text-white:hover,
+  button.bg-transparent.hover\:text-white:hover,
+  a.bg-transparent.hover\:text-white:hover,
+  button.hover\:text-white:hover:not([class*="bg-blue"]):not([class*="bg-emerald"]):not([class*="bg-rose"]):not([class*="bg-red"]):not([class*="bg-indigo"]):not([class*="bg-teal"]):not([class*="bg-primary"]):not([class*="bg-success"]) {
+    color: hsl(var(--foreground)) !important;
+  }
 }
 
