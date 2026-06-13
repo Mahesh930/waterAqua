@@ -42,6 +42,10 @@ jobs:
     name: Frontend Test Suite & Lint
     runs-on: ubuntu-latest
 
+    defaults:
+      run:
+        working-directory: frontend
+
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
@@ -51,7 +55,7 @@ jobs:
         with:
           node-version: 18
           cache: 'npm'
-          cache-dependency-path: package-lock.json
+          cache-dependency-path: frontend/package-lock.json
 
       - name: Install Frontend Dependencies
         run: npm ci
