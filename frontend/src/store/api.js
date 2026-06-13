@@ -366,6 +366,14 @@ export const api = createApi({
       transformResponse: (response) => response.data,
       invalidatesTags: ['User', 'Admin'],
     }),
+    deleteUser: builder.mutation({
+      query: (id) => ({
+        url: `/admin/users/${id}`,
+        method: 'DELETE',
+      }),
+      transformResponse: (response) => response.data,
+      invalidatesTags: ['User', 'Admin', 'Supplier'],
+    }),
   }),
 });
 
@@ -408,4 +416,5 @@ export const {
   useGetAdminCommissionsQuery,
   useGetAdminLogsQuery,
   useToggleUserStatusMutation,
+  useDeleteUserMutation,
 } = api;

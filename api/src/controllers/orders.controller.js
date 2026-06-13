@@ -157,8 +157,11 @@ exports.createOrder = async (req, res, next) => {
 
     const newOrder = order[0];
 
-    // Clear user's cart
-    await CartItem.deleteMany({ user: req.user.id }, { session });
+    // Clear user's cart immediately for COD orders.
+    // For online payments, the cart will be cleared upon successful payment verification.
+    if (paymentMethod !== 'online') {
+      await CartItem.deleteMany({ user: req.user.id }, { session });
+    }
 
     // Calculate admin commission
     const orderHour = new Date().getHours();
@@ -236,6 +239,15 @@ exports.getOrders = async (req, res, next) => {
       filter.customer = req.user.id;
     } else if (req.user.role === 'supplier') {
       filter.supplier = req.user.id;
+      // Hide online orders that are not paid yet
+      filter.$and = [
+        {
+          $or: [
+            { paymentMethod: { $ne: 'online' } },
+            { paymentStatus: 'paid' }
+          ]
+        }
+      ];
     }
 
     const { status, search } = req.query;
@@ -480,9 +492,7 @@ exports.verifyOtp = async (req, res, next) => {
 
     order.status = 'delivered';
     order.otpVerified = true;
-    if (order.paymentMethod === 'cod') {
-      order.paymentStatus = req.body.paymentStatus || 'paid';
-    }
+    order.paymentStatus = 'paid';
     await order.save();
 
     // Check if this is the customer's first completed order to claim referral bonus
@@ -604,6 +614,9 @@ exports.verifyRazorpayPayment = async (req, res, next) => {
         timestamp: new Date().toISOString()
       });
     }
+
+    // Clear the customer's cart items post successful payment verification
+    await CartItem.deleteMany({ user: order.customer });
 
     // Create success notification
     await Notification.create({

@@ -55,10 +55,6 @@ const UserSchema = new mongoose.Schema(
       enum: ['active', 'suspended'],
       default: 'active'
     },
-    deletedAt: {
-      type: Date,
-      default: null
-    },
     resetPasswordToken: String,
     resetPasswordExpire: Date,
     referralCode: {

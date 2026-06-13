@@ -1,16 +1,29 @@
 import React, { useState, useEffect } from "react";
 import { Badge } from "@/ui/badge";
 import { Button } from "@/ui/button";
-import { Star, ShieldBan, ShieldCheck, Users, Search, Phone, Mail, Award, ChevronLeft, ChevronRight } from "lucide-react";
+import { Star, ShieldBan, ShieldCheck, Users, Search, Phone, Mail, Award, ChevronLeft, ChevronRight, Trash2 } from "lucide-react";
 import { Input } from "@/ui/input";
 import { useToast } from "@/shared/hooks/use-toast";
-import { useGetAdminUsersQuery, useGetOrdersQuery, useToggleUserStatusMutation } from "@/store/api";
+import { useGetAdminUsersQuery, useGetOrdersQuery, useToggleUserStatusMutation, useDeleteUserMutation } from "@/store/api";
 import { motion } from "framer-motion";
+import { useAuth } from "@/contexts/AuthContext";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/ui/alert-dialog";
 
 const container = { hidden: {}, show: { transition: { staggerChildren: 0.05 } } };
 const item = { hidden: { opacity: 0, y: 15 }, show: { opacity: 1, y: 0 } };
 
 export default function AdminUsers() {
+  const { user: currentUser } = useAuth();
   const { toast } = useToast();
   const [search, setSearch] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
@@ -36,6 +49,7 @@ export default function AdminUsers() {
 
   const { data: ordersData = {}, isLoading: ordersLoading } = useGetOrdersQuery({ limit: 1000 });
   const [toggleUserStatus] = useToggleUserStatusMutation();
+  const [deleteUser] = useDeleteUserMutation();
 
   const users = responseData.results || [];
   const pagination = responseData.pagination || { page: 1, pages: 1, total: 0 };
@@ -55,6 +69,22 @@ export default function AdminUsers() {
       toast({
         title: "Action failed",
         description: error?.data?.error || error?.message || "Could not update status",
+        variant: "destructive"
+      });
+    }
+  };
+
+  const handleDeleteUser = async (userRecord) => {
+    try {
+      await deleteUser(userRecord.id || userRecord._id).unwrap();
+      toast({
+        title: "User deleted successfully ✅",
+        description: `${userRecord.name || "User"}'s account has been soft-deleted.`
+      });
+    } catch (error) {
+      toast({
+        title: "Deletion failed ❌",
+        description: error?.data?.error || error?.message || "Could not delete user",
         variant: "destructive"
       });
     }
@@ -197,6 +227,34 @@ export default function AdminUsers() {
                       </>
                     )}
                   </Button>
+                  {customerId !== (currentUser?.id || currentUser?._id) && (
+                    <AlertDialog>
+                      <AlertDialogTrigger asChild>
+                        <Button
+                          size="sm"
+                          variant="destructive"
+                          className="rounded-xl text-xs font-bold gap-1.5 h-8 bg-rose-600 hover:bg-rose-500 text-white border-0"
+                        >
+                          <Trash2 className="h-3.5 w-3.5" /> Delete
+                        </Button>
+                      </AlertDialogTrigger>
+                      <AlertDialogContent className="bg-[#0e142e] border border-white/5 text-slate-200">
+                        <AlertDialogHeader>
+                          <AlertDialogTitle className="text-white text-xl font-bold">Delete User Account?</AlertDialogTitle>
+                          <AlertDialogDescription className="text-slate-400 mt-2 font-semibold leading-relaxed">
+                            Are you sure you want to delete the user account for <strong className="text-white font-bold">{c.name || "Unnamed"}</strong>? 
+                            This action will soft-delete their login records and deactivate their profile.
+                          </AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <AlertDialogFooter className="mt-6 gap-2">
+                          <AlertDialogCancel className="bg-white/5 hover:bg-white/10 text-white rounded-xl border-0">Cancel</AlertDialogCancel>
+                          <AlertDialogAction onClick={() => handleDeleteUser(c)} className="bg-rose-600 hover:bg-rose-500 text-white font-bold rounded-xl border-0">
+                            Yes, Delete
+                          </AlertDialogAction>
+                        </AlertDialogFooter>
+                      </AlertDialogContent>
+                    </AlertDialog>
+                  )}
                 </div>
               </motion.div>
             );

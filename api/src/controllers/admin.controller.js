@@ -6,15 +6,24 @@ const AuditLog = require('../models/AuditLog');
 const { logAudit } = require('../utils/auditLogger');
 const paginate = require('../utils/pagination');
 
+// Automatically clean up (hard-delete) any old soft-deleted users on boot
+User.deleteMany({ deletedAt: { $ne: null } })
+  .then(result => {
+    if (result.deletedCount > 0) {
+      console.log(`Successfully hard-deleted ${result.deletedCount} old soft-deleted users.`);
+    }
+  })
+  .catch(err => console.error('Error hard-deleting old soft-deleted users:', err));
+
 // @desc    Get dashboard metrics overview
 // @route   GET /api/v1/admin/overview
 // @access  Private (Admin Only)
 exports.getOverview = async (req, res, next) => {
   try {
-    const totalCustomers = await User.countDocuments({ role: 'customer', deletedAt: null });
-    const totalSuppliers = await User.countDocuments({ role: 'supplier', deletedAt: null });
+    const totalCustomers = await User.countDocuments({ role: 'customer' });
+    const totalSuppliers = await User.countDocuments({ role: 'supplier' });
     const totalOrders = await Order.countDocuments();
-    const totalUsers = await User.countDocuments({ deletedAt: null });
+    const totalUsers = await User.countDocuments();
 
     // Aggregate total sales revenue for delivered orders
     const revenueStats = await Order.aggregate([
@@ -185,7 +194,7 @@ exports.getOverview = async (req, res, next) => {
 exports.getUsers = async (req, res, next) => {
   try {
     const { role, search } = req.query;
-    const filter = { deletedAt: null };
+    const filter = {};
     if (role) {
       filter.role = role;
     }
@@ -301,6 +310,60 @@ exports.toggleUserStatus = async (req, res, next) => {
     });
 
     res.success({ id: user._id, status: user.status, message: `User account successfully ${status}` });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// @desc    Delete a user account (soft delete)
+// @route   DELETE /api/v1/admin/users/:id
+// @access  Private (Admin Only)
+exports.deleteUser = async (req, res, next) => {
+  try {
+    const user = await User.findById(req.params.id);
+
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        error: 'User not found',
+        timestamp: new Date().toISOString()
+      });
+    }
+
+    if (user._id.toString() === req.user.id) {
+      return res.status(400).json({
+        success: false,
+        error: 'Cannot delete your own active administrator account',
+        timestamp: new Date().toISOString()
+      });
+    }
+
+    // Hard-delete the user document from the database
+    await User.findByIdAndDelete(user._id);
+
+    // Perform cascading deletions for associated entities
+    if (user.role === 'supplier') {
+      // Delete their Supplier profile
+      await Supplier.findOneAndDelete({ user: user._id });
+      // Delete all products listed by this supplier
+      const Product = require('../models/Product');
+      await Product.deleteMany({ supplier: user._id });
+    } else if (user.role === 'customer') {
+      // Delete their shopping cart items
+      const CartItem = require('../models/CartItem');
+      await CartItem.deleteMany({ user: user._id });
+    }
+
+    await logAudit({
+      userId: req.user.id,
+      action: 'user_deleted',
+      entityType: 'User',
+      entityId: user._id,
+      details: { targetUserId: user._id, targetUserName: user.name, deleteType: 'hard_delete' },
+      req
+    });
+
+    res.success({ id: user._id, message: 'User account successfully deleted' });
   } catch (error) {
     next(error);
   }

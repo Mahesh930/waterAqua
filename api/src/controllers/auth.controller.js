@@ -45,7 +45,7 @@ exports.register = async (req, res, next) => {
 
     // Handle referral if referredByCode is provided
     if (referredByCode) {
-      const referrer = await User.findOne({ referralCode: referredByCode.toUpperCase(), deletedAt: null });
+      const referrer = await User.findOne({ referralCode: referredByCode.toUpperCase() });
       if (referrer) {
         const Referral = require('../models/Referral');
         await Referral.create({
@@ -115,7 +115,7 @@ exports.login = async (req, res, next) => {
     }
 
     // Check user in database (explicitly select password)
-    const user = await User.findOne({ email, deletedAt: null }).select('+password');
+    const user = await User.findOne({ email }).select('+password');
     if (!user) {
       log.warn({ email }, '[LOGIN] Failed — user not found in database');
       return res.status(401).json({
@@ -180,7 +180,7 @@ exports.getMe = async (req, res, next) => {
   try {
     // req.user is already fetched and validated by protect middleware
     // Use req.user._id directly to ensure we return the authenticated user's data
-    const user = await User.findOne({ _id: req.user._id, deletedAt: null });
+    const user = await User.findById(req.user._id);
 
     if (!user) {
       return res.status(401).json({
@@ -246,7 +246,7 @@ exports.forgotPassword = async (req, res, next) => {
   try {
     const { email } = req.body;
 
-    const user = await User.findOne({ email, deletedAt: null });
+    const user = await User.findOne({ email });
 
     if (!user) {
       return res.status(404).json({
@@ -297,8 +297,7 @@ exports.resetPassword = async (req, res, next) => {
 
     const user = await User.findOne({
       resetPasswordToken,
-      resetPasswordExpire: { $gt: Date.now() },
-      deletedAt: null
+      resetPasswordExpire: { $gt: Date.now() }
     });
 
     if (!user) {

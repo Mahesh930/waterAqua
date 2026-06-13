@@ -8,7 +8,7 @@ import { Label } from "@/ui/label";
 import { useCart } from "@/features/customer/hooks/use-cart";
 import { useNavigate } from "react-router-dom";
 import { useToast } from "@/shared/hooks/use-toast";
-import { useCreateOrderMutation, useVerifyRazorpayPaymentMutation } from "@/store/api";
+import { useCreateOrderMutation, useVerifyRazorpayPaymentMutation, useCancelOrderMutation } from "@/store/api";
 import { motion, AnimatePresence } from "framer-motion";
 import { useAuth } from "@/contexts/AuthContext";
 
@@ -19,7 +19,8 @@ const timeSlots = [
   "08:00 AM - 11:00 AM",
   "11:00 AM - 02:00 PM",
   "02:00 PM - 05:00 PM",
-  "05:00 PM - 08:00 PM"
+  "05:00 PM - 08:00 PM",
+  "08:00 PM - 10:00 PM"
 ];
 
 export default function Cart() {
@@ -30,6 +31,7 @@ export default function Cart() {
 
   const [createOrder, { isLoading: placing }] = useCreateOrderMutation();
   const [verifyRazorpayPayment] = useVerifyRazorpayPaymentMutation();
+  const [cancelOrder] = useCancelOrderMutation();
 
   // Checkout Form fields
   const [address, setAddress] = useState(user?.address || "");
@@ -140,6 +142,20 @@ export default function Cart() {
           },
           theme: {
             color: "#2563eb"
+          },
+          modal: {
+            ondismiss: async function () {
+              try {
+                await cancelOrder(resOrder._id).unwrap();
+                toast({
+                  title: "Payment Cancelled ℹ️",
+                  description: "The payment session was closed. Your order was cancelled and cart preserved.",
+                  variant: "warning"
+                });
+              } catch (err) {
+                console.error("Failed to cancel unpaid order:", err);
+              }
+            }
           }
         };
 
@@ -416,8 +432,8 @@ export default function Cart() {
                       type="button"
                       onClick={() => setPaymentMethod(method.key)}
                       className={`flex-1 py-2.5 rounded-xl text-xs font-bold border transition-colors ${paymentMethod === method.key
-                          ? "bg-blue-600/10 border-blue-500 text-blue-300"
-                          : "bg-[#090d22] border-white/5 text-slate-400 hover:text-white"
+                        ? "bg-blue-600/10 border-blue-500 text-blue-300"
+                        : "bg-[#090d22] border-white/5 text-slate-400 hover:text-white"
                         }`}
                     >
                       {method.label}

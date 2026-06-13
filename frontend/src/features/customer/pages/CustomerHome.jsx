@@ -135,17 +135,13 @@ export default function CustomerHome() {
                       {statusLabels[ord.status]}
                     </span>
                     <span className={`px-2 py-0.5 rounded-lg text-[9px] font-extrabold border uppercase tracking-wider ${
-                      ord.paymentMethod === 'online'
-                        ? ord.paymentStatus === 'paid'
-                          ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20'
-                          : 'bg-amber-500/10 text-amber-400 border-amber-500/20'
-                        : 'bg-slate-500/10 text-slate-400 border-slate-500/20'
+                      ord.paymentStatus === 'paid'
+                        ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20'
+                        : 'bg-amber-500/10 text-amber-400 border-amber-500/20'
                     }`}>
-                      {ord.paymentMethod === 'online'
-                        ? ord.paymentStatus === 'paid'
-                          ? 'Paid'
-                          : 'Pay Pending'
-                        : 'COD'}
+                      {ord.paymentStatus === 'paid'
+                        ? ord.paymentMethod === 'online' ? 'Paid' : 'Paid'
+                        : ord.paymentMethod === 'online' ? 'Pay Pending' : 'COD (Pending)'}
                     </span>
                   </div>
                   <h4 className="font-bold text-base mt-3 text-white">

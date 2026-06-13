@@ -26,8 +26,8 @@ const protect = async (req, res, next) => {
     // Verify token
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
 
-    // Get user from database — exclude soft-deleted users
-    const user = await User.findOne({ _id: decoded.id, deletedAt: null });
+    // Get user from database
+    const user = await User.findById(decoded.id);
 
     if (!user) {
       const log = req.logger || require('../utils/logger');
