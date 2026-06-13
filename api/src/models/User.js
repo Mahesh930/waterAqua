@@ -18,7 +18,7 @@ const UserSchema = new mongoose.Schema(
     password: {
       type: String,
       required: [true, 'Please provide a password'],
-      minlength: [6, 'Password must be at least 6 characters'],
+      minlength: [8, 'Password must be at least 8 characters'],
       select: false // Exclude from query results by default
     },
     name: {
@@ -74,10 +74,11 @@ const UserSchema = new mongoose.Schema(
 
 // Encrypt password and generate referral code before saving
 UserSchema.pre('save', async function (next) {
-  // Generate referral code if not present
-  if (!this.referralCode) {
-    const namePart = (this.name || 'USER').substring(0, 4).toUpperCase().replace(/[^A-Z]/g, '');
-    const randPart = Math.floor(1000 + Math.random() * 9000).toString();
+  // Generate referral code only for new users (not on every save)
+  if (this.isNew && !this.referralCode) {
+    // Use crypto for collision-resistant codes: NAME prefix + 8-char hex
+    const namePart = (this.name || 'USER').substring(0, 3).toUpperCase().replace(/[^A-Z]/g, '');
+    const randPart = crypto.randomBytes(4).toString('hex').toUpperCase();
     this.referralCode = `${namePart}${randPart}`;
   }
 

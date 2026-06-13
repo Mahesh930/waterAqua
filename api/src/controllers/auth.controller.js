@@ -4,9 +4,9 @@ const jwt = require('jsonwebtoken');
 const crypto = require('crypto');
 const { logAudit } = require('../utils/auditLogger');
 
-// Helper to generate and sign JWT token
-const signToken = (id) => {
-  return jwt.sign({ id }, process.env.JWT_SECRET, {
+// Helper to generate and sign JWT token (includes role for integrity validation)
+const signToken = (id, role) => {
+  return jwt.sign({ id, role }, process.env.JWT_SECRET, {
     expiresIn: process.env.JWT_EXPIRES_IN || '7d'
   });
 };
@@ -67,7 +67,7 @@ exports.register = async (req, res, next) => {
     }
 
     // Generate token
-    const token = signToken(user._id);
+    const token = signToken(user._id, user.role);
 
     // Remove password from response payload
     const userResponse = user.toObject();
@@ -146,7 +146,7 @@ exports.login = async (req, res, next) => {
     }
 
     // Generate token
-    const token = signToken(user._id);
+    const token = signToken(user._id, user.role);
 
     const userResponse = user.toObject();
     delete userResponse.password;
@@ -178,9 +178,19 @@ exports.login = async (req, res, next) => {
 // @access  Private
 exports.getMe = async (req, res, next) => {
   try {
-    const user = await User.findById(req.user.id);
-    let supplierProfile = null;
+    // req.user is already fetched and validated by protect middleware
+    // Use req.user._id directly to ensure we return the authenticated user's data
+    const user = await User.findOne({ _id: req.user._id, deletedAt: null });
 
+    if (!user) {
+      return res.status(401).json({
+        success: false,
+        error: 'User account not found or has been deleted.',
+        timestamp: new Date().toISOString()
+      });
+    }
+
+    let supplierProfile = null;
     if (user.role === 'supplier') {
       supplierProfile = await Supplier.findOne({ user: user._id });
     }

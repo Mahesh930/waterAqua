@@ -2,7 +2,7 @@ import React from "react";
 import { Link } from "react-router-dom";
 import { ShoppingBag, Users, Truck, IndianRupee, TrendingUp, Star, Package, ChevronRight, Shield, Clock } from "lucide-react";
 import { Button } from "@/ui/button";
-import { useGetOrdersQuery, useGetAdminSuppliersQuery, useGetAdminUsersQuery, useGetAdminCommissionsQuery } from "@/store/api";
+import { useGetAdminOverviewQuery } from "@/store/api";
 import { motion } from "framer-motion";
 import { AreaChart, Area, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
 import { useAuth } from "@/contexts/AuthContext";
@@ -14,12 +14,7 @@ export default function AdminOverview() {
   const { user } = useAuth();
 
   // RTK Queries
-  const { data: orders = [], isLoading: ordersLoading } = useGetOrdersQuery();
-  const { data: suppliers = [], isLoading: suppliersLoading } = useGetAdminSuppliersQuery();
-  const { data: profiles = [], isLoading: profilesLoading } = useGetAdminUsersQuery();
-  const { data: commissions = [], isLoading: commissionsLoading } = useGetAdminCommissionsQuery();
-
-  const isLoading = ordersLoading || suppliersLoading || profilesLoading || commissionsLoading;
+  const { data: overviewData = {}, isLoading } = useGetAdminOverviewQuery();
 
   if (isLoading) {
     return (
@@ -30,23 +25,17 @@ export default function AdminOverview() {
     );
   }
 
-  const totalRevenue = orders.filter(o => o.status === "delivered").reduce((sum, o) => sum + Number(o.totalAmount || o.total_amount || 0), 0);
-  const totalCommission = commissions.reduce((sum, c) => sum + Number(c.commissionAmount || c.commission_amount || 0), 0);
-  const today = new Date().toISOString().slice(0, 10);
-  
-  const ordersToday = orders.filter(o => {
-    const oDate = o.createdAt || o.created_at;
-    return oDate && new Date(oDate).toISOString().slice(0, 10) === today;
-  }).length;
-  
-  const pendingOrders = orders.filter(o => o.status === "placed").length;
-  const activeSuppliers = suppliers.filter(s => s.isActive || s.available).length;
+  const totalRevenue = overviewData.totalRevenue || 0;
+  const totalCommission = overviewData.totalCommissions || 0;
+  const ordersToday = overviewData.ordersToday || 0;
+  const pendingOrders = overviewData.pendingOrders || 0;
+  const activeSuppliers = overviewData.activeSuppliers || 0;
 
   const stats = [
-    { icon: ShoppingBag, label: "Total Orders", value: orders.length, gradient: "from-blue-500/10 via-blue-500/5 to-transparent", iconBg: "bg-blue-500/10", iconColor: "text-blue-400" },
+    { icon: ShoppingBag, label: "Total Orders", value: overviewData.totalOrders || 0, gradient: "from-blue-500/10 via-blue-500/5 to-transparent", iconBg: "bg-blue-500/10", iconColor: "text-blue-400" },
     { icon: IndianRupee, label: "Platform Revenue", value: `₹${totalRevenue > 1000 ? (totalRevenue / 1000).toFixed(1) + "K" : totalRevenue.toLocaleString()}`, gradient: "from-emerald-500/10 via-emerald-400/5 to-transparent", iconBg: "bg-emerald-500/10", iconColor: "text-emerald-400" },
     { icon: TrendingUp, label: "Commission Earned", value: `₹${totalCommission > 1000 ? (totalCommission / 1000).toFixed(1) + "K" : Math.round(totalCommission).toLocaleString()}`, gradient: "from-amber-500/10 via-amber-500/5 to-transparent", iconBg: "bg-amber-500/10", iconColor: "text-amber-400" },
-    { icon: Users, label: "Users", value: profiles.length, gradient: "from-violet-500/10 via-violet-400/5 to-transparent", iconBg: "bg-violet-500/10", iconColor: "text-violet-400" },
+    { icon: Users, label: "Users", value: overviewData.totalUsers || 0, gradient: "from-violet-500/10 via-violet-400/5 to-transparent", iconBg: "bg-violet-500/10", iconColor: "text-violet-400" },
     { icon: Truck, label: "Active Suppliers", value: activeSuppliers, gradient: "from-indigo-500/10 via-indigo-500/5 to-transparent", iconBg: "bg-indigo-500/10", iconColor: "text-indigo-400" },
     { icon: Clock, label: "Pending Orders", value: pendingOrders, gradient: "from-rose-500/10 via-rose-500/5 to-transparent", iconBg: "bg-rose-500/10", iconColor: "text-rose-400" },
   ];
@@ -60,40 +49,9 @@ export default function AdminOverview() {
 
   // Chart data
   const currentYear = new Date().getFullYear();
-  const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
-  const monthlyData = monthNames.map((name, idx) => {
-    const monthOrders = orders.filter(o => {
-      const oDate = o.createdAt || o.created_at;
-      const d = new Date(oDate);
-      return d.getFullYear() === currentYear && d.getMonth() === idx && o.status === "delivered";
-    });
-    const monthCommissions = commissions.filter(c => {
-      const cDate = c.createdAt || c.created_at;
-      const d = new Date(cDate);
-      return d.getFullYear() === currentYear && d.getMonth() === idx;
-    });
-    return {
-      month: name,
-      revenue: monthOrders.reduce((sum, o) => sum + Number(o.totalAmount || o.total_amount || 0), 0),
-      commission: monthCommissions.reduce((sum, c) => sum + Number(c.commissionAmount || c.commission_amount || 0), 0),
-    };
-  });
-
-  const dailyData = Array.from({ length: 14 }, (_, i) => {
-    const d = new Date();
-    d.setDate(d.getDate() - (13 - i));
-    const dateStr = d.toISOString().slice(0, 10);
-    const count = orders.filter(o => {
-      const oDate = o.createdAt || o.created_at;
-      return oDate && new Date(oDate).toISOString().slice(0, 10) === dateStr;
-    }).length;
-    return { 
-      date: d.toLocaleDateString("en-IN", { day: "numeric", month: "short" }), 
-      orders: count 
-    };
-  });
-
-  const topSuppliers = [...suppliers].sort((a, b) => Number(b.rating || 0) - Number(a.rating || 0)).slice(0, 5);
+  const monthlyData = overviewData.monthlyData || [];
+  const dailyData = overviewData.dailyData || [];
+  const topSuppliers = overviewData.topSuppliers || [];
 
   return (
     <motion.div variants={container} initial="hidden" animate="show" className="space-y-8 text-slate-200">

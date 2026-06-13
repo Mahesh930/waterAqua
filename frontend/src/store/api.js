@@ -78,7 +78,12 @@ export const api = createApi({
         url: '/suppliers',
         params: params || undefined,
       }),
-      transformResponse: (response) => response.data?.results || response.data,
+      transformResponse: (response, meta, arg) => {
+        if (arg && (arg.page !== undefined || arg.limit !== undefined || arg.paginated === true)) {
+          return response.data || response;
+        }
+        return response.data?.results || response.data || [];
+      },
       providesTags: ['Supplier'],
     }),
     getSupplierById: builder.query({
@@ -217,8 +222,16 @@ export const api = createApi({
 
     // ORDER ENDPOINTS
     getOrders: builder.query({
-      query: () => '/orders',
-      transformResponse: (response) => response.data?.results || response.data,
+      query: (params) => ({
+        url: '/orders',
+        params: params || undefined,
+      }),
+      transformResponse: (response, meta, arg) => {
+        if (arg && (arg.page !== undefined || arg.limit !== undefined || arg.paginated === true)) {
+          return response.data || response;
+        }
+        return response.data?.results || response.data || [];
+      },
       providesTags: ['Order'],
     }),
     getOrderById: builder.query({
@@ -262,10 +275,10 @@ export const api = createApi({
       invalidatesTags: ['Order', 'Product'],
     }),
     verifyOtp: builder.mutation({
-      query: ({ id, otp }) => ({
+      query: ({ id, ...body }) => ({
         url: `/orders/${id}/verify-otp`,
         method: 'POST',
-        body: { otp },
+        body,
       }),
       transformResponse: (response) => response.data,
       invalidatesTags: ['Order'],
@@ -297,17 +310,38 @@ export const api = createApi({
         url: '/admin/users',
         params: params || undefined,
       }),
-      transformResponse: (response) => response.data?.results || response.data,
+      transformResponse: (response, meta, arg) => {
+        if (arg && (arg.page !== undefined || arg.limit !== undefined || arg.paginated === true)) {
+          return response.data || response;
+        }
+        return response.data?.results || response.data || [];
+      },
       providesTags: ['User'],
     }),
     getAdminSuppliers: builder.query({
-      query: () => '/admin/suppliers',
-      transformResponse: (response) => response.data?.results || response.data,
+      query: (params) => ({
+        url: '/admin/suppliers',
+        params: params || undefined,
+      }),
+      transformResponse: (response, meta, arg) => {
+        if (arg && (arg.page !== undefined || arg.limit !== undefined || arg.paginated === true)) {
+          return response.data || response;
+        }
+        return response.data?.results || response.data || [];
+      },
       providesTags: ['Supplier'],
     }),
     getAdminCommissions: builder.query({
-      query: () => '/admin/commissions',
-      transformResponse: (response) => response.data?.results || response.data,
+      query: (params) => ({
+        url: '/admin/commissions',
+        params: params || undefined,
+      }),
+      transformResponse: (response, meta, arg) => {
+        if (arg && (arg.page !== undefined || arg.limit !== undefined || arg.paginated === true)) {
+          return response.data || response;
+        }
+        return response.data?.results || response.data || [];
+      },
       providesTags: ['Admin'],
     }),
     getAdminLogs: builder.query({
@@ -315,7 +349,12 @@ export const api = createApi({
         url: '/admin/logs',
         params: params || undefined,
       }),
-      transformResponse: (response) => response.data?.results || response.data,
+      transformResponse: (response, meta, arg) => {
+        if (arg && (arg.page !== undefined || arg.limit !== undefined || arg.paginated === true)) {
+          return response.data || response;
+        }
+        return response.data?.results || response.data || [];
+      },
       providesTags: ['Admin'],
     }),
     toggleUserStatus: builder.mutation({

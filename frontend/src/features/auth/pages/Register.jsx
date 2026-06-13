@@ -32,12 +32,34 @@ export default function Register() {
   const handleRegister = async (e) => {
     e.preventDefault();
 
+    // Email format validation (client-side)
+    const emailRegex = /^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$/;
+    if (!emailRegex.test(email.trim())) {
+      toast({
+        title: "Invalid Email",
+        description: "Please provide a valid email address (e.g. you@example.com).",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    // Phone number validation (must be exactly 10 digits)
+    const phoneClean = phone.replace(/\D/g, "");
+    if (phoneClean.length !== 10) {
+      toast({
+        title: "Invalid Phone Number",
+        description: "Please enter a valid 10-digit phone number.",
+        variant: "destructive"
+      });
+      return;
+    }
+
     // Password policy validation
-    const passwordRegex = /^(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*()_+{}[\]:;<>,.?~\\/-]).{8,}$/;
+    const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).{8,}$/;
     if (!passwordRegex.test(password)) {
       toast({ 
         title: "Weak Password", 
-        description: "Password must be at least 8 characters long and include 1 capital letter, 1 number, and 1 special symbol.", 
+        description: "Password must be at least 8 characters long and include at least 1 uppercase letter, 1 lowercase letter, and 1 number.", 
         variant: "destructive" 
       });
       return;
@@ -54,10 +76,10 @@ export default function Register() {
 
     try {
       const payload = {
-        name,
-        email,
+        name: name.trim(),
+        email: email.trim().toLowerCase(),
         password,
-        phone,
+        phone: phoneClean,
         role,
         pincode,
         address,
@@ -79,7 +101,16 @@ export default function Register() {
       else if (user.role === "admin") navigate("/admin");
     } catch (error) {
       console.error("[Register] Failed:", error?.data?.error || error?.message || error);
-      const errMsg = error?.data?.error || error?.message || "Registration failed. Check inputs.";
+      // Handle Zod validation error arrays from backend
+      let errMsg = "Registration failed. Please check your inputs.";
+      const errData = error?.data?.error;
+      if (Array.isArray(errData)) {
+        errMsg = errData.map(e => e.message).join(". ");
+      } else if (typeof errData === "string") {
+        errMsg = errData;
+      } else if (error?.message) {
+        errMsg = error.message;
+      }
       toast({ 
         title: "Registration failed", 
         description: errMsg, 
@@ -170,9 +201,10 @@ export default function Register() {
                     id="phone" 
                     type="tel" 
                     placeholder="9876543210" 
+                    maxLength={10}
                     className="pl-10 rounded-xl bg-[#090d22] border-white/5 text-white placeholder-slate-600 focus-visible:ring-blue-500" 
                     value={phone} 
-                    onChange={e => setPhone(e.target.value)} 
+                    onChange={e => setPhone(e.target.value.replace(/\D/g, "").slice(0, 10))} 
                     required 
                   />
                 </div>
@@ -232,7 +264,7 @@ export default function Register() {
                 </button>
               </div>
               <p className="text-[10px] text-slate-500 mt-1 px-1">
-                Min. 8 characters, 1 capital, 1 number, 1 special symbol
+                Min. 8 characters, at least 1 uppercase, 1 lowercase, and 1 number
               </p>
             </div>
 

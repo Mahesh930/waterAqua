@@ -93,8 +93,13 @@ export default function Login() {
       toast({ title: "Token required", description: "Please provide a valid password reset token.", variant: "destructive" });
       return;
     }
-    if (newPassword.length < 6) {
-      toast({ title: "Weak password", description: "Password must be at least 6 characters long.", variant: "destructive" });
+    const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).{8,}$/;
+    if (!passwordRegex.test(newPassword)) {
+      toast({ 
+        title: "Weak password", 
+        description: "Password must be at least 8 characters long and include at least 1 uppercase letter, 1 lowercase letter, and 1 number.", 
+        variant: "destructive" 
+      });
       return;
     }
     if (newPassword !== confirmPassword) {

@@ -1,5 +1,5 @@
-import React, { useState } from "react";
-import { useGetOrdersQuery } from "@/store/api";
+import React, { useState, useEffect } from "react";
+import { useGetOrdersQuery, useGetAdminOverviewQuery } from "@/store/api";
 import { motion } from "framer-motion";
 import { Package, MapPin, Clock, IndianRupee, Search, ChevronLeft, ChevronRight } from "lucide-react";
 import { Input } from "@/ui/input";
@@ -27,49 +27,53 @@ const statusLabels = {
 export default function AdminOrders() {
   const [filter, setFilter] = useState("all");
   const [search, setSearch] = useState("");
-  const [currentPage, setCurrentPage] = useState(1);
-  const itemsPerPage = 10;
+  const [debouncedSearch, setDebouncedSearch] = useState("");
+  const [page, setPage] = useState(1);
 
-  // RTK Query: fetch all platform orders
-  const { data: orders = [], isLoading } = useGetOrdersQuery();
+  // Debounce search input
+  useEffect(() => {
+    const handler = setTimeout(() => {
+      setDebouncedSearch(search);
+      setPage(1);
+    }, 400);
+    return () => clearTimeout(handler);
+  }, [search]);
+
+  // RTK Query: fetch paginated/filtered platform orders
+  const { data: responseData = {}, isLoading } = useGetOrdersQuery({
+    status: filter !== "all" ? filter : undefined,
+    search: debouncedSearch || undefined,
+    page,
+    limit: 10
+  });
+
+  const { data: overviewData = {} } = useGetAdminOverviewQuery();
+
+  const orders = responseData.results || [];
+  const pagination = responseData.pagination || { page: 1, pages: 1, total: 0 };
+  const orderCounts = overviewData.orderCounts || {
+    placed: 0,
+    confirmed: 0,
+    out_for_delivery: 0,
+    delivered: 0,
+    cancelled: 0
+  };
 
   const filterTabs = [
-    { key: "all", label: "All", count: orders.length },
-    { key: "placed", label: "Pending", count: orders.filter(o => o.status === "placed").length },
-    { key: "confirmed", label: "Confirmed", count: orders.filter(o => o.status === "confirmed").length },
-    { key: "out_for_delivery", label: "Dispatched", count: orders.filter(o => o.status === "out_for_delivery").length },
-    { key: "delivered", label: "Delivered", count: orders.filter(o => o.status === "delivered").length },
-    { key: "cancelled", label: "Cancelled", count: orders.filter(o => o.status === "cancelled").length },
+    { key: "all", label: "All", count: overviewData.totalOrders || 0 },
+    { key: "placed", label: "Pending", count: orderCounts.placed },
+    { key: "confirmed", label: "Confirmed", count: orderCounts.confirmed },
+    { key: "out_for_delivery", label: "Dispatched", count: orderCounts.out_for_delivery },
+    { key: "delivered", label: "Delivered", count: orderCounts.delivered },
+    { key: "cancelled", label: "Cancelled", count: orderCounts.cancelled },
   ];
-
-  const filtered = orders
-    .filter(o => filter === "all" || o.status === filter)
-    .filter(o => {
-      const term = search.toLowerCase();
-      const oId = o.id || o._id || "";
-      const sName = (o.supplier?.name || o.supplier?.businessName || "").toLowerCase();
-      return !search || oId.includes(search) || sName.includes(term);
-    });
-
-  const totalValue = filtered.reduce((sum, o) => sum + Number(o.totalAmount || o.total_amount || 0), 0);
-
-  // Pagination
-  const totalPages = Math.ceil(filtered.length / itemsPerPage);
-  const startIdx = (currentPage - 1) * itemsPerPage;
-  const endIdx = startIdx + itemsPerPage;
-  const paginatedOrders = filtered.slice(startIdx, endIdx);
-
-  // Reset to page 1 when filter/search changes
-  if (currentPage > totalPages && totalPages > 0) {
-    setCurrentPage(1);
-  }
 
   return (
     <motion.div variants={container} initial="hidden" animate="show" className="space-y-6 text-slate-200">
       <motion.div variants={item} className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-3">
         <div>
           <h2 className="text-2xl sm:text-3xl font-bold text-white tracking-tight">All Orders</h2>
-          <p className="text-slate-400 text-sm mt-0.5">{orders.length} total orders · ₹{totalValue.toLocaleString()} value</p>
+          <p className="text-slate-400 text-sm mt-0.5">{pagination.total} orders matching filters</p>
         </div>
       </motion.div>
 
@@ -77,7 +81,7 @@ export default function AdminOrders() {
       <motion.div variants={item} className="relative">
         <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-500" />
         <Input 
-          placeholder="Search by order ID or supplier brand..." 
+          placeholder="Search by order ID, customer name or supplier brand..." 
           value={search} 
           onChange={e => setSearch(e.target.value)}
           className="pl-10 rounded-xl h-11 bg-[#0e142e]/60 border-white/5 text-white placeholder-slate-600 focus-visible:ring-blue-500" 
@@ -89,7 +93,7 @@ export default function AdminOrders() {
         {filterTabs.map(t => (
           <button 
             key={t.key} 
-            onClick={() => setFilter(t.key)}
+            onClick={() => { setFilter(t.key); setPage(1); }}
             className={`flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-semibold whitespace-nowrap transition-all ${
               filter === t.key 
                 ? "bg-blue-600 text-white shadow-md shadow-blue-600/10" 
@@ -108,7 +112,7 @@ export default function AdminOrders() {
           <div className="animate-spin h-10 w-10 border-4 border-blue-500 border-t-transparent rounded-full" />
           <p className="text-sm text-slate-400 font-semibold">Filtering orders logs...</p>
         </div>
-      ) : filtered.length === 0 ? (
+      ) : orders.length === 0 ? (
         <div className="text-center py-20 bg-[#0e142e]/30 border border-white/5 rounded-3xl shadow-lg">
           <div className="h-16 w-16 mx-auto mb-4 rounded-full bg-white/5 flex items-center justify-center">
             <Package className="h-8 w-8 text-slate-500" />
@@ -119,27 +123,27 @@ export default function AdminOrders() {
         <div className="space-y-4">
           <div className="flex items-center justify-between">
             <p className="text-xs text-slate-500 font-semibold uppercase tracking-wider">
-              Showing {startIdx + 1}-{Math.min(endIdx, filtered.length)} of {filtered.length} order{filtered.length !== 1 ? "s" : ""}
+              Showing {((page - 1) * 10) + 1}-{Math.min(page * 10, pagination.total)} of {pagination.total} order{pagination.total !== 1 ? "s" : ""}
             </p>
             <div className="flex items-center gap-1.5">
               <Button 
                 variant="outline" 
                 size="sm" 
                 className="h-8 px-2 rounded-lg border-white/5 bg-[#0e142e] hover:bg-white/5 text-white shrink-0"
-                onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
-                disabled={currentPage === 1}
+                onClick={() => setPage(prev => Math.max(1, prev - 1))}
+                disabled={page === 1}
               >
                 <ChevronLeft className="h-4 w-4" />
               </Button>
               <div className="text-xs font-semibold px-2 text-slate-400">
-                Page {currentPage} of {Math.max(1, totalPages)}
+                Page {page} of {pagination.pages}
               </div>
               <Button 
                 variant="outline" 
                 size="sm" 
                 className="h-8 px-2 rounded-lg border-white/5 bg-[#0e142e] hover:bg-white/5 text-white shrink-0"
-                onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 1))}
-                disabled={currentPage >= totalPages}
+                onClick={() => setPage(prev => Math.min(pagination.pages, prev + 1))}
+                disabled={page >= pagination.pages}
               >
                 <ChevronRight className="h-4 w-4" />
               </Button>
@@ -147,7 +151,7 @@ export default function AdminOrders() {
           </div>
 
           <div className="space-y-2.5">
-            {paginatedOrders.map(order => {
+            {orders.map(order => {
               const oId = order.id || order._id;
               const oDate = order.createdAt || order.created_at;
               const qty = order.products ? order.products.reduce((acc, p) => acc + Number(p.quantity || 0), 0) : Number(order.quantity || 0);
@@ -160,7 +164,7 @@ export default function AdminOrders() {
                 >
                   <div className="flex items-center justify-between gap-3">
                     <div className="flex items-center gap-3.5 min-w-0">
-                      <div className="h-11 w-11 rounded-xl bg-blue-600/10 flex items-center justify-center text-lg shrink-0 border border-blue-500/10">📦</div>
+                       <div className="h-11 w-11 rounded-xl bg-blue-600/10 flex items-center justify-center text-lg shrink-0 border border-blue-500/10">📦</div>
                       <div className="min-w-0">
                         <div className="flex items-center gap-2 flex-wrap">
                           <span className="font-bold text-white text-sm">#{oId.slice(-8).toUpperCase()}</span>

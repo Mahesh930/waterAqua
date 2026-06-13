@@ -72,10 +72,10 @@ export default function Cart() {
       return;
     }
 
-    if (!phone || phone.length < 10) {
+    if (!phone || phone.length !== 10) {
       toast({
         title: "Invalid Phone",
-        description: "Please enter a valid contact phone number.",
+        description: "Please enter a valid 10-digit contact phone number.",
         variant: "destructive"
       });
       return;
@@ -327,7 +327,8 @@ export default function Cart() {
                         id="phone"
                         placeholder="9876543210"
                         value={phone}
-                        onChange={e => setPhone(e.target.value.replace(/\D/g, "").slice(0, 12))}
+                        maxLength={10}
+                        onChange={e => setPhone(e.target.value.replace(/\D/g, "").slice(0, 10))}
                         className="pl-10 rounded-xl bg-[#090d22] border-white/5 text-white focus-visible:ring-blue-500"
                         required
                       />

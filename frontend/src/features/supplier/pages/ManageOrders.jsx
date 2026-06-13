@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react";
 import { Button } from "@/ui/button";
 import { Checkbox } from "@/ui/checkbox";
 import { useToast } from "@/shared/hooks/use-toast";
-import { Check, X, Truck, MapPin, CheckCheck, Clock, Package, ChevronRight, KeyRound } from "lucide-react";
+import { Check, X, Truck, MapPin, CheckCheck, Clock, Package, ChevronRight, KeyRound, User, Phone, Mail, Calendar, ChevronLeft } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useGetOrdersQuery, useUpdateOrderStatusMutation, useVerifyOtpMutation } from "@/store/api";
 import { motion, AnimatePresence } from "framer-motion";
@@ -44,14 +44,19 @@ export default function ManageOrders() {
   const [otpInput, setOtpInput] = useState("");
   const [otpVerifying, setOtpVerifying] = useState(false);
   const [transitProgress] = useState({});
+  const [paymentReceived, setPaymentReceived] = useState(true);
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 10;
 
   const { toast } = useToast();
   const { user } = useAuth();
 
-  // RTK Queries & Mutations
-  const { data: orders = [], isLoading, refetch } = useGetOrdersQuery(undefined, {
+  // RTK Queries & Mutations (query a limit of 1000 so websocket location mapping works for all transits)
+  const { data: responseData = {}, isLoading, refetch } = useGetOrdersQuery({ limit: 1000 }, {
     pollingInterval: 12000
   });
+
+  const orders = responseData.results || [];
 
   const [updateOrderStatus] = useUpdateOrderStatusMutation();
   const [verifyOtp] = useVerifyOtpMutation();
@@ -114,6 +119,11 @@ export default function ManageOrders() {
   }, [orders]);
 
   const filtered = filter === "all" ? orders : orders.filter(o => o.status === filter);
+  const totalPages = Math.ceil(filtered.length / itemsPerPage);
+  const startIdx = (currentPage - 1) * itemsPerPage;
+  const endIdx = startIdx + itemsPerPage;
+  const paginatedOrders = filtered.slice(startIdx, endIdx);
+
   const pendingOrders = filtered.filter(o => o.status === "placed");
   const selectedPending = pendingOrders.filter(o => selected.has(o.id || o._id));
 
@@ -153,6 +163,7 @@ export default function ManageOrders() {
 
   const handleOpenOtpDialog = (order) => {
     setOtpInput("");
+    setPaymentReceived(true);
     setOtpDialogOrder(order);
   };
 
@@ -164,7 +175,8 @@ export default function ManageOrders() {
     try {
       await verifyOtp({
         id: otpDialogOrder.id || otpDialogOrder._id,
-        otp: otpInput
+        otp: otpInput,
+        paymentStatus: paymentReceived ? "paid" : "pending"
       }).unwrap();
 
       toast({ 
@@ -228,7 +240,7 @@ export default function ManageOrders() {
         {filterTabs.map(t => (
           <button 
             key={t.key} 
-            onClick={() => setFilter(t.key)}
+            onClick={() => { setFilter(t.key); setCurrentPage(1); }}
             className={`flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-semibold whitespace-nowrap transition-all ${
               filter === t.key 
                 ? "bg-blue-600 text-white shadow-md shadow-blue-600/10" 
@@ -280,7 +292,7 @@ export default function ManageOrders() {
         </div>
       ) : (
         <div className="space-y-3">
-          {filtered.map((order) => {
+          {paginatedOrders.map((order) => {
             const ordId = order.id || order._id;
             const isCancelled = order.status === "cancelled";
             const isDelivered = order.status === "delivered";
@@ -333,6 +345,68 @@ export default function ManageOrders() {
                     <span className="font-black text-white text-lg shrink-0">₹{order.totalAmount}</span>
                   </div>
 
+                  {/* Customer Information Block */}
+                  <div className="bg-[#090d22]/40 border border-white/5 rounded-xl p-3.5 space-y-3">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2 text-xs font-bold text-white uppercase tracking-wider">
+                        <User className="h-4 w-4 text-blue-400" />
+                        Customer Information
+                      </div>
+                      {order.customer?.status && (
+                        <span className={`px-2 py-0.5 rounded text-[10px] font-extrabold uppercase border ${
+                          order.customer.status === 'active' 
+                            ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' 
+                            : 'bg-rose-500/10 text-rose-400 border-rose-500/20'
+                        }`}>
+                          {order.customer.status} account
+                        </span>
+                      )}
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-xs">
+                      <div className="space-y-2">
+                        <div className="flex items-center gap-2 text-slate-400">
+                          <span className="font-semibold text-slate-500 w-16">Name:</span>
+                          <span className="text-slate-200 font-bold">{order.customer?.name || "N/A"}</span>
+                        </div>
+                        <div className="flex items-center gap-2 text-slate-400">
+                          <span className="font-semibold text-slate-500 w-16">Mobile:</span>
+                          <span className="text-slate-200 font-semibold">{order.phone || order.customer?.phone || "N/A"}</span>
+                        </div>
+                      </div>
+
+                      <div className="space-y-2">
+                        {order.customer?.email && (
+                          <div className="flex items-center gap-2 text-slate-400">
+                            <span className="font-semibold text-slate-500 w-16">Email:</span>
+                            <span className="text-slate-300">{order.customer.email}</span>
+                          </div>
+                        )}
+                        {order.customer?.createdAt && (
+                          <div className="flex items-center gap-2 text-slate-400">
+                            <span className="font-semibold text-slate-500 w-16">Joined:</span>
+                            <span className="text-slate-400 flex items-center gap-1">
+                              <Calendar className="h-3 w-3 text-slate-500" />
+                              {new Date(order.customer.createdAt).toLocaleDateString("en-IN", { month: "short", year: "numeric" })}
+                            </span>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+
+                    {(order.phone || order.customer?.phone) && (
+                      <div className="pt-2 border-t border-white/5 flex justify-end">
+                        <a 
+                          href={`tel:${order.phone || order.customer?.phone}`}
+                          className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold transition-all text-xs shadow-md shadow-emerald-600/10 hover:shadow-emerald-600/20 cursor-pointer"
+                        >
+                          <Phone className="h-3.5 w-3.5 animate-pulse" />
+                          Call Customer
+                        </a>
+                      </div>
+                    )}
+                  </div>
+
                   {order.deliveryAddress && (
                     <div className="flex items-start gap-2.5 text-xs text-slate-400 bg-white/5 border border-white/5 rounded-xl p-3">
                       <MapPin className="h-4 w-4 text-blue-400 shrink-0 mt-0.5" />
@@ -383,6 +457,38 @@ export default function ManageOrders() {
         </div>
       )}
 
+      {/* Pagination Controls */}
+      {totalPages > 1 && (
+        <div className="flex items-center justify-between mt-6 p-4 bg-[#0e142e]/60 border border-white/5 rounded-2xl shadow-md">
+          <p className="text-xs text-slate-500 font-semibold uppercase tracking-wider">
+            Showing {startIdx + 1}-{Math.min(endIdx, filtered.length)} of {filtered.length} orders
+          </p>
+          <div className="flex items-center gap-1.5">
+            <Button 
+              variant="outline" 
+              size="sm" 
+              className="h-8 px-2 rounded-lg border-white/5 bg-[#0e142e] hover:bg-white/5 text-white shrink-0"
+              onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+              disabled={currentPage === 1}
+            >
+              <ChevronLeft className="h-4 w-4" />
+            </Button>
+            <div className="text-xs font-semibold px-2 text-slate-400">
+              Page {currentPage} of {totalPages}
+            </div>
+            <Button 
+              variant="outline" 
+              size="sm" 
+              className="h-8 px-2 rounded-lg border-white/5 bg-[#0e142e] hover:bg-white/5 text-white shrink-0"
+              onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
+              disabled={currentPage >= totalPages}
+            >
+              <ChevronRight className="h-4 w-4" />
+            </Button>
+          </div>
+        </div>
+      )}
+
       {/* OTP verification dialog */}
       <Dialog open={!!otpDialogOrder} onOpenChange={() => setOtpDialogOrder(null)}>
         <DialogContent className="bg-[#0e142e] border-white/5 text-slate-200">
@@ -396,6 +502,51 @@ export default function ManageOrders() {
           </DialogHeader>
 
           <form onSubmit={handleVerifyOtp} className="space-y-4 my-2">
+            {otpDialogOrder?.paymentMethod === 'cod' && (
+              <div className="space-y-2.5 bg-white/5 border border-white/5 rounded-xl p-3 text-xs">
+                <div className="flex items-center justify-between">
+                  <span className="text-slate-400 font-semibold">Payment Method:</span>
+                  <span className="bg-amber-500/10 text-amber-400 font-bold px-2 py-0.5 rounded border border-amber-500/10 uppercase tracking-wider text-[10px]">
+                    💵 Cash on Delivery
+                  </span>
+                </div>
+                <div className="flex items-center justify-between pt-1 border-t border-white/5">
+                  <span className="text-slate-400 font-semibold">Amount to Collect:</span>
+                  <span className="text-white font-black text-sm">₹{otpDialogOrder.totalAmount}</span>
+                </div>
+                
+                <div className="pt-2 border-t border-white/5 space-y-2">
+                  <Label className="text-slate-400 text-[10px] font-bold uppercase tracking-wider">Confirm Payment Status:</Label>
+                  <div className="flex gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setPaymentReceived(true)}
+                      className={`flex-1 py-2 rounded-lg font-bold text-xs flex items-center justify-center gap-1.5 transition-all border ${
+                        paymentReceived 
+                          ? 'bg-emerald-600 text-white border-transparent shadow-md shadow-emerald-600/15' 
+                          : 'bg-[#090d22] text-slate-500 border-white/5 hover:text-slate-400'
+                      }`}
+                    >
+                      <Check className="h-3.5 w-3.5" />
+                      Paid
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setPaymentReceived(false)}
+                      className={`flex-1 py-2 rounded-lg font-bold text-xs flex items-center justify-center gap-1.5 transition-all border ${
+                        !paymentReceived 
+                          ? 'bg-amber-600 text-white border-transparent shadow-md shadow-amber-600/15' 
+                          : 'bg-[#090d22] text-slate-500 border-white/5 hover:text-slate-400'
+                      }`}
+                    >
+                      <Clock className="h-3.5 w-3.5" />
+                      Pending
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
+
             <div>
               <Label htmlFor="otp" className="text-slate-300">4-Digit Code</Label>
               <Input 

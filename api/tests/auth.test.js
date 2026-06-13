@@ -41,7 +41,7 @@ describe('Auth Controller Tests', () => {
         .send({
           name: 'Test Customer',
           email: 'customer@example.com',
-          password: 'password123',
+          password: 'Password123',
           phone: '1234567890',
           role: 'customer'
         });
@@ -62,7 +62,7 @@ describe('Auth Controller Tests', () => {
         .send({
           name: 'Test Customer',
           email: 'customer@example.com',
-          password: 'password123',
+          password: 'Password123',
           phone: '1234567890',
           role: 'customer'
         });
@@ -72,34 +72,20 @@ describe('Auth Controller Tests', () => {
       expect(res.body.error).toContain('already exists');
     });
 
-    it('should default role to customer if admin role is requested', async () => {
-      const mockUser = {
-        _id: 'user_admin_attempt',
-        name: 'Malicious Admin',
-        email: 'admin_attempt@example.com',
-        phone: '1234567890',
-        role: 'customer', // Should be forced to customer in auth.controller.js
-        toObject: function() { return this; }
-      };
-
-      User.findOne.mockResolvedValue(null);
-      User.create.mockResolvedValue(mockUser);
-
+    it('should reject registration if admin role is requested', async () => {
       const res = await request(app)
         .post('/api/v1/auth/register')
         .send({
           name: 'Malicious Admin',
           email: 'admin_attempt@example.com',
-          password: 'password123',
+          password: 'Password123',
           phone: '1234567890',
-          role: 'admin' // Attempting admin registration
+          role: 'admin'
         });
 
-      expect(res.status).toBe(201);
-      expect(res.body.data.user.role).toBe('customer');
-      expect(User.create).toHaveBeenCalledWith(expect.objectContaining({
-        role: 'customer'
-      }));
+      expect(res.status).toBe(400);
+      expect(res.body.success).toBe(false);
+      expect(res.body.error).toContain('role');
     });
   });
 
@@ -124,13 +110,13 @@ describe('Auth Controller Tests', () => {
         .post('/api/v1/auth/login')
         .send({
           email: 'customer@example.com',
-          password: 'password123'
+          password: 'Password123'
         });
 
       expect(res.status).toBe(200);
       expect(res.body.success).toBe(true);
       expect(res.body.data.token).toBeDefined();
-      expect(mockUser.matchPassword).toHaveBeenCalledWith('password123');
+      expect(mockUser.matchPassword).toHaveBeenCalledWith('Password123');
     });
 
     it('should reject invalid credentials', async () => {

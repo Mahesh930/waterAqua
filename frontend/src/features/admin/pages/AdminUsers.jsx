@@ -1,7 +1,7 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Badge } from "@/ui/badge";
 import { Button } from "@/ui/button";
-import { Star, ShieldBan, ShieldCheck, Users, Search, Phone, Mail, Award } from "lucide-react";
+import { Star, ShieldBan, ShieldCheck, Users, Search, Phone, Mail, Award, ChevronLeft, ChevronRight } from "lucide-react";
 import { Input } from "@/ui/input";
 import { useToast } from "@/shared/hooks/use-toast";
 import { useGetAdminUsersQuery, useGetOrdersQuery, useToggleUserStatusMutation } from "@/store/api";
@@ -13,14 +13,33 @@ const item = { hidden: { opacity: 0, y: 15 }, show: { opacity: 1, y: 0 } };
 export default function AdminUsers() {
   const { toast } = useToast();
   const [search, setSearch] = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
   const [selectedRole, setSelectedRole] = useState("all");
+  const [page, setPage] = useState(1);
+
+  // Debounce search input to avoid hitting backend on every keystroke
+  useEffect(() => {
+    const handler = setTimeout(() => {
+      setDebouncedSearch(search);
+      setPage(1);
+    }, 400);
+    return () => clearTimeout(handler);
+  }, [search]);
 
   // RTK queries & mutations
-  const { data: users = [], isLoading: usersLoading } = useGetAdminUsersQuery(
-    selectedRole === "all" ? undefined : { role: selectedRole }
-  );
-  const { data: orders = [], isLoading: ordersLoading } = useGetOrdersQuery();
+  const { data: responseData = {}, isLoading: usersLoading } = useGetAdminUsersQuery({
+    role: selectedRole === "all" ? undefined : selectedRole,
+    search: debouncedSearch || undefined,
+    page,
+    limit: 10
+  });
+
+  const { data: ordersData = {}, isLoading: ordersLoading } = useGetOrdersQuery({ limit: 1000 });
   const [toggleUserStatus] = useToggleUserStatusMutation();
+
+  const users = responseData.results || [];
+  const pagination = responseData.pagination || { page: 1, pages: 1, total: 0 };
+  const orders = ordersData.results || [];
 
   const isLoading = usersLoading || ordersLoading;
 
@@ -40,13 +59,6 @@ export default function AdminUsers() {
       });
     }
   };
-
-  const filteredUsers = users.filter(u => 
-    !search || 
-    u.name?.toLowerCase().includes(search.toLowerCase()) || 
-    u.phone?.includes(search) || 
-    u.email?.toLowerCase().includes(search.toLowerCase())
-  );
 
   const roleBadgeStyles = {
     customer: "bg-blue-500/10 text-blue-400 border-blue-500/10 hover:bg-blue-500/20",
@@ -75,7 +87,7 @@ export default function AdminUsers() {
       <motion.div variants={item} className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-3">
         <div>
           <h2 className="text-2xl sm:text-3xl font-bold text-white tracking-tight">User Management</h2>
-          <p className="text-slate-400 text-sm mt-0.5">{filteredUsers.length} registered users found</p>
+          <p className="text-slate-400 text-sm mt-0.5">{pagination.total} registered users found</p>
         </div>
       </motion.div>
 
@@ -89,7 +101,7 @@ export default function AdminUsers() {
         ].map(tab => (
           <button 
             key={tab.key} 
-            onClick={() => { setSelectedRole(tab.key); setSearch(""); }}
+            onClick={() => { setSelectedRole(tab.key); setSearch(""); setPage(1); }}
             className={`flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-semibold whitespace-nowrap transition-all ${
               selectedRole === tab.key 
                 ? "bg-blue-600 text-white shadow-md shadow-blue-600/10" 
@@ -114,13 +126,13 @@ export default function AdminUsers() {
 
       {/* Users List */}
       <div className="space-y-2.5">
-        {filteredUsers.length === 0 ? (
+        {users.length === 0 ? (
           <div className="text-center py-16 bg-[#0e142e]/30 border border-white/5 rounded-3xl shadow-lg">
             <Users className="h-12 w-12 mx-auto text-slate-600 mb-2.5" />
             <p className="text-sm text-slate-500 font-semibold">No users found</p>
           </div>
         ) : (
-          filteredUsers.map((c) => {
+          users.map((c) => {
             const customerId = c.id || c._id;
             const customerOrders = orders.filter(o => {
               const oCustId = o.customer?._id || o.customer;
@@ -191,6 +203,38 @@ export default function AdminUsers() {
           })
         )}
       </div>
+
+      {/* Pagination Controls */}
+      {pagination.pages > 1 && (
+        <div className="flex items-center justify-between mt-6 p-4 bg-[#0e142e]/60 border border-white/5 rounded-2xl shadow-md">
+          <p className="text-xs text-slate-500 font-semibold uppercase tracking-wider">
+            Showing {((page - 1) * 10) + 1}-{Math.min(page * 10, pagination.total)} of {pagination.total} users
+          </p>
+          <div className="flex items-center gap-1.5">
+            <Button 
+              variant="outline" 
+              size="sm" 
+              className="h-8 px-2 rounded-lg border-white/5 bg-[#0e142e] hover:bg-white/5 text-white shrink-0"
+              onClick={() => setPage(prev => Math.max(1, prev - 1))}
+              disabled={page === 1}
+            >
+              <ChevronLeft className="h-4 w-4" />
+            </Button>
+            <div className="text-xs font-semibold px-2 text-slate-400">
+              Page {page} of {pagination.pages}
+            </div>
+            <Button 
+              variant="outline" 
+              size="sm" 
+              className="h-8 px-2 rounded-lg border-white/5 bg-[#0e142e] hover:bg-white/5 text-white shrink-0"
+              onClick={() => setPage(prev => Math.min(pagination.pages, prev + 1))}
+              disabled={page >= pagination.pages}
+            >
+              <ChevronRight className="h-4 w-4" />
+            </Button>
+          </div>
+        </div>
+      )}
     </motion.div>
   );
 }

@@ -19,12 +19,33 @@ const item = { hidden: { opacity: 0, y: 15 }, show: { opacity: 1, y: 0 } };
 export default function AdminSuppliers() {
   const { toast } = useToast();
   const [search, setSearch] = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
   const [selectedSupplier, setSelectedSupplier] = useState(null);
+  const [page, setPage] = useState(1);
+
+  // Debounce search input
+  useEffect(() => {
+    const handler = setTimeout(() => {
+      setDebouncedSearch(search);
+      setPage(1);
+    }, 400);
+    return () => clearTimeout(handler);
+  }, [search]);
 
   // RTK Queries & Mutations
-  const { data: suppliers = [], isLoading: suppliersLoading } = useGetAdminSuppliersQuery();
-  const { data: orders = [], isLoading: ordersLoading } = useGetOrdersQuery();
+  const { data: responseData = {}, isLoading: suppliersLoading } = useGetAdminSuppliersQuery({
+    search: debouncedSearch || undefined,
+    page,
+    limit: 10
+  });
+
+  const { data: ordersData = {}, isLoading: ordersLoading } = useGetOrdersQuery({ limit: 1000 });
+  const { data: overviewData = {} } = useGetAdminOverviewQuery();
   const [toggleUserStatus] = useToggleUserStatusMutation();
+
+  const suppliers = responseData.results || [];
+  const pagination = responseData.pagination || { page: 1, pages: 1, total: 0 };
+  const orders = ordersData.results || [];
 
   const isLoading = suppliersLoading || ordersLoading;
 
@@ -50,13 +71,6 @@ export default function AdminSuppliers() {
     }
   };
 
-  const filteredSuppliers = suppliers.filter(s => {
-    const term = search.toLowerCase();
-    const matchesName = (s.businessName || s.business_name || "").toLowerCase().includes(term);
-    const matchesArea = (s.area || "").toLowerCase().includes(term);
-    return !search || matchesName || matchesArea;
-  });
-
   if (isLoading) {
     return (
       <div className="flex flex-col items-center justify-center py-20 gap-3">
@@ -73,15 +87,15 @@ export default function AdminSuppliers() {
         <div>
           <h2 className="text-2xl sm:text-3xl font-bold text-white tracking-tight">Manage Suppliers</h2>
           <p className="text-slate-400 text-sm mt-0.5">
-            {suppliers.length} total registered suppliers
+            {pagination.total} total registered suppliers
           </p>
         </div>
         <div className="flex items-center gap-2">
            <Badge className="px-3 py-1 rounded-lg bg-emerald-500/10 text-emerald-400 border border-emerald-500/10 text-xs font-bold">
-             {suppliers.filter(s => (s.isActive || s.available) && s.user?.status !== "suspended").length} Active
+             {overviewData.activeSuppliers || 0} Online
            </Badge>
            <Badge className="px-3 py-1 rounded-lg bg-rose-500/10 text-rose-400 border border-rose-500/10 text-xs font-bold">
-             {suppliers.filter(s => s.user?.status === "suspended").length} Suspended
+             {(overviewData.totalSuppliers || 0) - (overviewData.activeSuppliers || 0)} Suspended/Offline
            </Badge>
         </div>
       </motion.div>
@@ -98,7 +112,7 @@ export default function AdminSuppliers() {
       </motion.div>
 
       {/* Suppliers List */}
-      {filteredSuppliers.length === 0 ? (
+      {suppliers.length === 0 ? (
         <div className="text-center py-20 bg-[#0e142e]/30 border border-white/5 rounded-3xl shadow-lg">
           <Truck className="h-12 w-12 mx-auto text-slate-600 mb-3" />
           <p className="font-bold text-lg text-white">No suppliers found</p>
@@ -106,7 +120,7 @@ export default function AdminSuppliers() {
         </div>
       ) : (
         <div className="grid gap-4.5">
-          {filteredSuppliers.map((s) => {
+          {suppliers.map((s) => {
             const supplierId = s.id || s._id;
             const supplierOrders = orders.filter(o => {
               const oSuppId = o.supplier?._id || o.supplier;
@@ -213,6 +227,38 @@ export default function AdminSuppliers() {
               </motion.div>
             );
           })}
+        </div>
+      )}
+
+      {/* Pagination Controls */}
+      {pagination.pages > 1 && (
+        <div className="flex items-center justify-between mt-6 p-4 bg-[#0e142e]/60 border border-white/5 rounded-2xl shadow-md">
+          <p className="text-xs text-slate-500 font-semibold uppercase tracking-wider">
+            Showing {((page - 1) * 10) + 1}-{Math.min(page * 10, pagination.total)} of {pagination.total} suppliers
+          </p>
+          <div className="flex items-center gap-1.5">
+            <Button 
+              variant="outline" 
+              size="sm" 
+              className="h-8 px-2 rounded-lg border-white/5 bg-[#0e142e] hover:bg-white/5 text-white shrink-0"
+              onClick={() => setPage(prev => Math.max(1, prev - 1))}
+              disabled={page === 1}
+            >
+              <ChevronLeft className="h-4 w-4" />
+            </Button>
+            <div className="text-xs font-semibold px-2 text-slate-400">
+              Page {page} of {pagination.pages}
+            </div>
+            <Button 
+              variant="outline" 
+              size="sm" 
+              className="h-8 px-2 rounded-lg border-white/5 bg-[#0e142e] hover:bg-white/5 text-white shrink-0"
+              onClick={() => setPage(prev => Math.min(pagination.pages, prev + 1))}
+              disabled={page >= pagination.pages}
+            >
+              <ChevronRight className="h-4 w-4" />
+            </Button>
+          </div>
         </div>
       )}
 

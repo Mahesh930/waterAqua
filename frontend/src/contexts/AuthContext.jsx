@@ -56,6 +56,8 @@ export function AuthProvider({ children }) {
   const signOut = async () => {
     setLoading(true);
     dispatch(logout());
+    // Reset all RTK Query cached data to prevent stale user profiles
+    dispatch(api.util.resetApiState());
     setLoading(false);
   };
 

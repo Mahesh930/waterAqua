@@ -76,8 +76,9 @@ export default function AdminAuditLogs() {
   const [filterAction, setFilterAction] = useState("all");
   const itemsPerPage = 15;
 
-  // RTK Query to get 100 recent audit logs from DB
-  const { data: logs = [], isLoading } = useGetAdminLogsQuery({ limit: 100 });
+  // RTK Query to get 1000 recent audit logs from DB
+  const { data: logsData = {}, isLoading } = useGetAdminLogsQuery({ limit: 1000 });
+  const logs = logsData.results || [];
 
   const accountActions = [
     "user_registered", "user_logged_in", "user_profile_updated",

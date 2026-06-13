@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from "react";
-import { Star, MapPin, Clock, Droplets, Search, Navigation, ShoppingCart, Truck as TruckIcon, Locate, ChevronRight } from "lucide-react";
+import { Star, MapPin, Clock, Droplets, Search, Navigation, ShoppingCart, Truck as TruckIcon, Locate, ChevronRight, ChevronLeft } from "lucide-react";
 import { Input } from "@/ui/input";
 import { Badge } from "@/ui/badge";
 import { Button } from "@/ui/button";
@@ -14,6 +14,7 @@ const item = { hidden: { opacity: 0, y: 20 }, show: { opacity: 1, y: 0 } };
 export default function BrowseSuppliers() {
   const [search, setSearch] = useState("");
   const [pincodeInput, setPincodeInput] = useState("");
+  const [page, setPage] = useState(1);
   const [sortBy, setSortBy] = useState("rating");
   const [gpsLoading, setGpsLoading] = useState(false);
   const [detectedArea, setDetectedArea] = useState(null);
@@ -22,10 +23,15 @@ export default function BrowseSuppliers() {
   const { toast } = useToast();
 
   // RTK Query hooks
-  const { data: suppliers = [], isLoading } = useGetSuppliersQuery({
+  const { data: responseData = {}, isLoading } = useGetSuppliersQuery({
     pincode: pincodeInput.length === 6 ? pincodeInput : undefined,
-    search: search || undefined
+    search: search || undefined,
+    page,
+    limit: 6 // 6 suppliers per page
   });
+
+  const suppliers = responseData.results || [];
+  const pagination = responseData.pagination || { page: 1, pages: 1, total: 0 };
 
   const handleGPS = () => {
     if (!navigator.geolocation) { 
@@ -89,6 +95,7 @@ export default function BrowseSuppliers() {
     });
   }, [suppliers, sortBy]);
 
+  const showResults = pincodeInput.length === 6 || search.trim().length > 0;
   const hasPincode = pincodeInput.length === 6;
 
   return (
@@ -100,7 +107,9 @@ export default function BrowseSuppliers() {
           <p className="text-slate-400 text-sm mt-0.5">
             {hasPincode
               ? `${sortedSuppliers.length} active water suppliers in ${detectedArea ? detectedArea.area : pincodeInput}`
-              : "Enter your 6-digit delivery pincode to discover local water distributors"}
+              : search.trim().length > 0
+                ? `Found ${sortedSuppliers.length} suppliers matching "${search}"`
+                : "Enter your 6-digit delivery pincode to discover local water distributors"}
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -132,7 +141,7 @@ export default function BrowseSuppliers() {
             <Input 
               placeholder="Search by brand name or description..." 
               value={search} 
-              onChange={e => setSearch(e.target.value)} 
+              onChange={e => { setSearch(e.target.value); setPage(1); }} 
               className="pl-10 rounded-xl h-11 bg-[#090d22] border-white/5 text-white placeholder-slate-600 focus-visible:ring-blue-500" 
             />
           </div>
@@ -142,7 +151,7 @@ export default function BrowseSuppliers() {
               <Input 
                 placeholder="Pincode" 
                 value={pincodeInput} 
-                onChange={e => setPincodeInput(e.target.value.replace(/\D/g, "").slice(0, 6))} 
+                onChange={e => { setPincodeInput(e.target.value.replace(/\D/g, "").slice(0, 6)); setPage(1); }} 
                 className="pl-10 rounded-xl h-11 bg-blue-500/5 border-blue-500/10 text-slate-100 font-semibold focus-visible:ring-blue-500" 
                 maxLength={6}
               />
@@ -175,7 +184,7 @@ export default function BrowseSuppliers() {
       </motion.div>
 
       {/* Prompter */}
-      {!hasPincode && (
+      {!showResults && (
         <motion.div variants={item} className="p-10 rounded-3xl bg-[#0e142e]/30 border border-white/5 text-center shadow-lg">
           <div className="h-16 w-16 mx-auto mb-4 rounded-2xl bg-blue-500/10 flex items-center justify-center border border-blue-500/15">
             <Navigation className="h-8 w-8 text-blue-400" />
@@ -193,7 +202,7 @@ export default function BrowseSuppliers() {
       )}
 
       {/* Results grid */}
-      {hasPincode && (
+      {showResults && (
         <>
           {isLoading ? (
             <div className="flex flex-col items-center justify-center py-20 gap-3">
@@ -231,6 +240,9 @@ export default function BrowseSuppliers() {
                   <div className="p-6 pt-2 space-y-4">
                     <div>
                       <h3 className="font-bold text-lg text-white group-hover:text-blue-300 transition-colors truncate">{s.businessName}</h3>
+                      {s.user?.name && (
+                        <p className="text-xs text-slate-400 mt-0.5 font-medium">Contact: {s.user.name}</p>
+                      )}
                       <div className="flex items-center gap-1.5 mt-1.5">
                         <Star className="h-3.5 w-3.5 fill-amber-500 text-amber-500" />
                         <span className="text-sm font-black text-white">{Number(s.rating || 0).toFixed(1)}</span>
@@ -264,6 +276,38 @@ export default function BrowseSuppliers() {
                   </div>
                 </motion.div>
               ))}
+            </div>
+          )}
+
+          {/* Pagination Controls */}
+          {pagination.pages > 1 && (
+            <div className="flex items-center justify-between mt-8 p-4 bg-[#0e142e]/60 border border-white/5 rounded-2xl shadow-md">
+              <p className="text-xs text-slate-500 font-semibold uppercase tracking-wider">
+                Showing {((page - 1) * 6) + 1}-{Math.min(page * 6, pagination.total)} of {pagination.total} suppliers
+              </p>
+              <div className="flex items-center gap-1.5">
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  className="h-8 px-2 rounded-lg border-white/5 bg-[#0e142e] hover:bg-white/5 text-white shrink-0"
+                  onClick={() => setPage(prev => Math.max(1, prev - 1))}
+                  disabled={page === 1}
+                >
+                  <ChevronLeft className="h-4 w-4" />
+                </Button>
+                <div className="text-xs font-semibold px-2 text-slate-400">
+                  Page {page} of {pagination.pages}
+                </div>
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  className="h-8 px-2 rounded-lg border-white/5 bg-[#0e142e] hover:bg-white/5 text-white shrink-0"
+                  onClick={() => setPage(prev => Math.min(pagination.pages, prev + 1))}
+                  disabled={page >= pagination.pages}
+                >
+                  <ChevronRight className="h-4 w-4" />
+                </Button>
+              </div>
             </div>
           )}
         </>

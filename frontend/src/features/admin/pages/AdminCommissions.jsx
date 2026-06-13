@@ -1,7 +1,8 @@
 import React, { useState } from "react";
 import { useGetAdminCommissionsQuery } from "@/store/api";
 import { motion } from "framer-motion";
-import { IndianRupee, TrendingUp, Clock, MapPin, Zap, Package, Calendar, Info } from "lucide-react";
+import { IndianRupee, TrendingUp, Clock, MapPin, Zap, Package, Calendar, Info, ChevronLeft, ChevronRight } from "lucide-react";
+import { Button } from "@/ui/button";
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from "recharts";
 
 const container = { hidden: {}, show: { transition: { staggerChildren: 0.06 } } };
@@ -9,9 +10,12 @@ const item = { hidden: { opacity: 0, y: 20 }, show: { opacity: 1, y: 0 } };
 
 export default function AdminCommissions() {
   const [period, setPeriod] = useState("all");
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 10;
 
-  // RTK Query: fetch admin commissions list
-  const { data: commissions = [], isLoading } = useGetAdminCommissionsQuery();
+  // RTK Query: fetch admin commissions list (fetch 1000 items so charts/summaries are calculated correctly)
+  const { data: commissionsData = {}, isLoading } = useGetAdminCommissionsQuery({ limit: 1000 });
+  const commissions = commissionsData.results || [];
 
   const now = new Date();
   const filtered = commissions.filter(c => {
@@ -66,6 +70,16 @@ export default function AdminCommissions() {
     { key: "week", label: "This Week" },
   ];
 
+  // Pagination calculations
+  const totalPages = Math.ceil(filtered.length / itemsPerPage);
+  const startIdx = (currentPage - 1) * itemsPerPage;
+  const endIdx = startIdx + itemsPerPage;
+  const paginatedCommissions = filtered.slice(startIdx, endIdx);
+
+  if (currentPage > totalPages && totalPages > 0) {
+    setCurrentPage(1);
+  }
+
   return (
     <motion.div variants={container} initial="hidden" animate="show" className="space-y-6 text-slate-200">
       {/* Header */}
@@ -78,7 +92,7 @@ export default function AdminCommissions() {
           {periodTabs.map(t => (
             <button 
               key={t.key} 
-              onClick={() => setPeriod(t.key)}
+              onClick={() => { setPeriod(t.key); setCurrentPage(1); }}
               className={`px-3.5 py-1.5 rounded-xl text-xs font-semibold transition-all ${
                 period === t.key 
                   ? "bg-blue-600 text-white shadow-md shadow-blue-600/10" 
@@ -200,56 +214,87 @@ export default function AdminCommissions() {
             <p className="text-sm text-slate-500 mt-1">Commissions are auto-generated when orders are delivered</p>
           </div>
         ) : (
-          <div className="space-y-2.5">
-            {filtered.slice(0, 20).map((c) => {
-              const cId = c.id || c._id;
-              const isPeak = c.isPeakHour || c.is_peak_hour;
-              const rate = c.commissionRate || c.commission_rate || 0.05;
-              const orderId = c.order?._id || c.order || c.order_id || "";
-              const cDate = c.createdAt || c.created_at;
-              const amount = c.commissionAmount || c.commission_amount || 0;
-              const orderVal = c.orderAmount || c.order_amount || 0;
-
-              return (
-                <motion.div 
-                  key={cId} 
-                  variants={item}
-                  className="bg-[#0e142e]/60 border border-white/5 rounded-2xl p-4 hover:shadow-lg transition-shadow shadow-md"
+          <div className="space-y-4">
+            <div className="flex items-center justify-between">
+              <p className="text-xs text-slate-500 font-semibold uppercase tracking-wider">
+                Showing {startIdx + 1}-{Math.min(endIdx, filtered.length)} of {filtered.length} record{filtered.length !== 1 ? "s" : ""}
+              </p>
+              <div className="flex items-center gap-1.5">
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  className="h-8 px-2 rounded-lg border-white/5 bg-[#0e142e] hover:bg-white/5 text-white shrink-0"
+                  onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+                  disabled={currentPage === 1}
                 >
-                  <div className="flex items-center justify-between gap-3">
-                    <div className="flex items-center gap-3.5 min-w-0">
-                      <div className={`h-10 w-10 rounded-xl flex items-center justify-center shrink-0 border ${
-                        isPeak 
-                          ? "bg-amber-500/10 border-amber-500/10" 
-                          : "bg-emerald-500/10 border-emerald-500/10"
-                      }`}>
-                        {isPeak ? <Zap className="h-5 w-5 text-amber-400" /> : <IndianRupee className="h-5 w-5 text-emerald-400" />}
-                      </div>
-                      <div className="min-w-0">
-                        <div className="flex items-center gap-2 flex-wrap">
-                          <span className="font-bold text-white text-sm">Order #{orderId.slice(-8).toUpperCase()}</span>
-                          <span className="px-2 py-0.5 rounded-lg text-[9px] font-bold uppercase tracking-wider bg-blue-500/10 text-blue-400 border border-blue-500/10">
-                            {(rate * 100).toFixed(0)}% rate
-                          </span>
-                          {isPeak && (
-                            <span className="px-2 py-0.5 rounded-lg text-[9px] font-bold uppercase tracking-wider bg-amber-500/10 text-amber-400 border border-amber-500/10">⚡ Peak</span>
-                          )}
+                  <ChevronLeft className="h-4 w-4" />
+                </Button>
+                <div className="text-xs font-semibold px-2 text-slate-400">
+                  Page {currentPage} of {Math.max(1, totalPages)}
+                </div>
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  className="h-8 px-2 rounded-lg border-white/5 bg-[#0e142e] hover:bg-white/5 text-white shrink-0"
+                  onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
+                  disabled={currentPage >= totalPages}
+                >
+                  <ChevronRight className="h-4 w-4" />
+                </Button>
+              </div>
+            </div>
+
+            <div className="space-y-2.5">
+              {paginatedCommissions.map((c) => {
+                const cId = c.id || c._id;
+                const isPeak = c.isPeakHour || c.is_peak_hour;
+                const rate = c.commissionRate || c.commission_rate || 0.05;
+                const orderId = c.order?._id || c.order || c.order_id || "";
+                const cDate = c.createdAt || c.created_at;
+                const amount = c.commissionAmount || c.commission_amount || 0;
+                const orderVal = c.orderAmount || c.order_amount || 0;
+
+                return (
+                  <motion.div 
+                    key={cId} 
+                    variants={item}
+                    className="bg-[#0e142e]/60 border border-white/5 rounded-2xl p-4 hover:shadow-lg transition-shadow shadow-md"
+                  >
+                    <div className="flex items-center justify-between gap-3">
+                      <div className="flex items-center gap-3.5 min-w-0">
+                        <div className={`h-10 w-10 rounded-xl flex items-center justify-center shrink-0 border ${
+                          isPeak 
+                            ? "bg-amber-500/10 border-amber-500/10" 
+                            : "bg-emerald-500/10 border-emerald-500/10"
+                        }`}>
+                          {isPeak ? <Zap className="h-5 w-5 text-amber-400" /> : <IndianRupee className="h-5 w-5 text-emerald-400" />}
                         </div>
-                        <div className="flex flex-wrap items-center gap-x-2.5 gap-y-1 text-xs text-slate-500 mt-1 font-semibold">
-                          {c.area && <span className="flex items-center gap-1"><MapPin className="h-3.5 w-3.5 text-slate-500" />{c.area}</span>}
-                          <span className="flex items-center gap-1"><Calendar className="h-3.5 w-3.5 text-slate-500" />{new Date(cDate).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })}</span>
-                          <span className="text-slate-400">Order: ₹{Number(orderVal).toLocaleString()}</span>
+                        <div className="min-w-0">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <span className="font-bold text-white text-sm">Order #{orderId.slice(-8).toUpperCase()}</span>
+                            <span className="px-2 py-0.5 rounded-lg text-[9px] font-bold uppercase tracking-wider bg-blue-500/10 text-blue-400 border border-blue-500/10">
+                              {(rate * 100).toFixed(0)}% rate
+                            </span>
+                            {isPeak && (
+                              <span className="px-2 py-0.5 rounded-lg text-[9px] font-bold uppercase tracking-wider bg-amber-500/10 text-amber-400 border border-amber-500/10">⚡ Peak</span>
+                            )}
+                          </div>
+                          <div className="flex flex-wrap items-center gap-x-2.5 gap-y-1 text-xs text-slate-500 mt-1 font-semibold">
+                            {c.area && <span className="flex items-center gap-1"><MapPin className="h-3.5 w-3.5 text-slate-500" />{c.area}</span>}
+                            <span className="flex items-center gap-1"><Calendar className="h-3.5 w-3.5 text-slate-500" />{new Date(cDate).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })}</span>
+                            <span className="text-slate-400">Order: ₹{Number(orderVal).toLocaleString()}</span>
+                          </div>
+                          {c.formulaBreakdown || c.formula_breakdown ? (
+                            <p className="text-[10px] text-slate-500 mt-1 italic font-semibold">{c.formulaBreakdown || c.formula_breakdown}</p>
+                          ) : null}
                         </div>
-                        {c.formulaBreakdown || c.formula_breakdown ? (
-                          <p className="text-[10px] text-slate-500 mt-1 italic font-semibold">{c.formulaBreakdown || c.formula_breakdown}</p>
-                        ) : null}
                       </div>
+                      <span className="font-bold text-emerald-400 text-lg shrink-0">+₹{Number(amount).toFixed(0)}</span>
                     </div>
-                    <span className="font-bold text-emerald-400 text-lg shrink-0">+₹{Number(amount).toFixed(0)}</span>
-                  </div>
-                </motion.div>
-              );
-            })}
+                  </motion.div>
+                );
+              })}
+            </div>
           </div>
         )}
       </motion.div>

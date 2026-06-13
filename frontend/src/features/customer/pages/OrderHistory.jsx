@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useGetOrdersQuery, useGetSupplierFeedbackQuery } from "@/store/api";
-import { Package, Droplets, Star, Send, Printer, ChevronDown, ChevronUp, MapPin, XCircle } from "lucide-react";
+import { Package, Droplets, Star, Send, Printer, ChevronDown, ChevronUp, MapPin, XCircle, ChevronLeft, ChevronRight } from "lucide-react";
 import { Button } from "@/ui/button";
 import { Textarea } from "@/ui/textarea";
 import { Badge } from "@/ui/badge";
@@ -78,9 +78,12 @@ export default function OrderHistory() {
   const [receiptOrder, setReceiptOrder] = useState(null);
   const [filter, setFilter] = useState("all");
   const [expandedId, setExpandedId] = useState(null);
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 10;
 
   // RTK Queries
-  const { data: orders = [], isLoading } = useGetOrdersQuery();
+  const { data: ordersData = {}, isLoading } = useGetOrdersQuery({ limit: 1000 });
+  const orders = ordersData.results || [];
 
   const historyOrders = orders.filter(o => o.status === "delivered" || o.status === "cancelled");
   const filtered = filter === "all" ? historyOrders : historyOrders.filter(o => o.status === filter);
@@ -88,6 +91,15 @@ export default function OrderHistory() {
   const totalSpent = historyOrders.filter(o => o.status === "delivered").reduce((sum, o) => sum + Number(o.totalAmount), 0);
   const deliveredCount = historyOrders.filter(o => o.status === "delivered").length;
   const cancelledCount = historyOrders.filter(o => o.status === "cancelled").length;
+
+  const totalPages = Math.ceil(filtered.length / itemsPerPage);
+  const startIdx = (currentPage - 1) * itemsPerPage;
+  const endIdx = startIdx + itemsPerPage;
+  const paginatedOrders = filtered.slice(startIdx, endIdx);
+
+  if (currentPage > totalPages && totalPages > 0) {
+    setCurrentPage(1);
+  }
 
   return (
     <div className="space-y-6 py-2 text-slate-200">
@@ -108,7 +120,7 @@ export default function OrderHistory() {
         ].filter(f => f.count > 0 || f.key === "all").map(f => (
           <button 
             key={f.key} 
-            onClick={() => setFilter(f.key)}
+            onClick={() => { setFilter(f.key); setCurrentPage(1); }}
             className={`px-4 py-2.5 rounded-xl text-xs font-semibold transition-all flex items-center gap-2 ${
               filter === f.key 
                 ? "bg-blue-600 text-white shadow-md shadow-blue-600/10" 
@@ -137,7 +149,7 @@ export default function OrderHistory() {
         </div>
       ) : (
         <div className="space-y-3">
-          {filtered.map((order) => {
+          {paginatedOrders.map((order) => {
             const isExpanded = expandedId === (order.id || order._id);
             const isCancelled = order.status === "cancelled";
             const orderHexId = (order.id || order._id).slice(-6).toUpperCase();
@@ -227,6 +239,38 @@ export default function OrderHistory() {
               </div>
             );
           })}
+        </div>
+      )}
+
+      {/* Pagination Controls */}
+      {totalPages > 1 && (
+        <div className="flex items-center justify-between mt-6 p-4 bg-[#0e142e]/60 border border-white/5 rounded-2xl shadow-md">
+          <p className="text-xs text-slate-500 font-semibold uppercase tracking-wider">
+            Showing {startIdx + 1}-{Math.min(endIdx, filtered.length)} of {filtered.length} orders
+          </p>
+          <div className="flex items-center gap-1.5">
+            <Button 
+              variant="outline" 
+              size="sm" 
+              className="h-8 px-2 rounded-lg border-white/5 bg-[#0e142e] hover:bg-white/5 text-white shrink-0"
+              onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+              disabled={currentPage === 1}
+            >
+              <ChevronLeft className="h-4 w-4" />
+            </Button>
+            <div className="text-xs font-semibold px-2 text-slate-400">
+              Page {currentPage} of {totalPages}
+            </div>
+            <Button 
+              variant="outline" 
+              size="sm" 
+              className="h-8 px-2 rounded-lg border-white/5 bg-[#0e142e] hover:bg-white/5 text-white shrink-0"
+              onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
+              disabled={currentPage >= totalPages}
+            >
+              <ChevronRight className="h-4 w-4" />
+            </Button>
+          </div>
         </div>
       )}
 

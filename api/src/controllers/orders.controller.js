@@ -238,8 +238,53 @@ exports.getOrders = async (req, res, next) => {
       filter.supplier = req.user.id;
     }
 
+    const { status, search } = req.query;
+
+    if (status) {
+      if (status.includes(',')) {
+        filter.status = { $in: status.split(',') };
+      } else {
+        filter.status = status;
+      }
+    }
+
+    if (search) {
+      const isObjectId = mongoose.Types.ObjectId.isValid(search);
+      const orConditions = [];
+
+      if (isObjectId) {
+        orConditions.push({ _id: search });
+      }
+
+      // Check if search matches customer name
+      const matchingCustomers = await User.find({
+        name: { $regex: search, $options: 'i' }
+      }).select('_id');
+      const matchingCustomerIds = matchingCustomers.map(u => u._id);
+      if (matchingCustomerIds.length > 0) {
+        orConditions.push({ customer: { $in: matchingCustomerIds } });
+      }
+
+      // Check if search matches supplier businessName
+      const Supplier = require('../models/Supplier');
+      const matchingSuppliers = await Supplier.find({
+        businessName: { $regex: search, $options: 'i' }
+      }).select('user');
+      const matchingSupplierUserIds = matchingSuppliers.map(s => s.user);
+      if (matchingSupplierUserIds.length > 0) {
+        orConditions.push({ supplier: { $in: matchingSupplierUserIds } });
+      }
+
+      if (orConditions.length > 0) {
+        filter.$or = orConditions;
+      } else if (!isObjectId) {
+        // If search doesn't match any customers/suppliers and isn't ObjectId, return empty results by matching a non-existent ObjectId
+        filter._id = new mongoose.Types.ObjectId();
+      }
+    }
+
     const populateOptions = [
-      { path: 'customer', select: 'name email phone avatarUrl address' },
+      { path: 'customer', select: 'name email phone avatarUrl address status createdAt' },
       { path: 'supplier', select: 'name email phone' }
     ];
 
@@ -269,7 +314,7 @@ exports.getOrders = async (req, res, next) => {
 exports.getOrderById = async (req, res, next) => {
   try {
     const order = await Order.findById(req.params.id)
-      .populate({ path: 'customer', select: 'name email phone avatarUrl address' })
+      .populate({ path: 'customer', select: 'name email phone avatarUrl address status createdAt' })
       .populate({ path: 'supplier', select: 'name email phone' });
 
     if (!order) {
@@ -362,7 +407,7 @@ exports.updateOrderStatus = async (req, res, next) => {
 
     // Populate user references for WebSocket payload
     order = await order.populate([
-      { path: 'customer', select: 'name email phone avatarUrl address' },
+      { path: 'customer', select: 'name email phone avatarUrl address status createdAt' },
       { path: 'supplier', select: 'name email phone' }
     ]);
 
@@ -436,7 +481,7 @@ exports.verifyOtp = async (req, res, next) => {
     order.status = 'delivered';
     order.otpVerified = true;
     if (order.paymentMethod === 'cod') {
-      order.paymentStatus = 'paid';
+      order.paymentStatus = req.body.paymentStatus || 'paid';
     }
     await order.save();
 
@@ -494,7 +539,7 @@ exports.verifyOtp = async (req, res, next) => {
     });
 
     order = await order.populate([
-      { path: 'customer', select: 'name email phone avatarUrl address' },
+      { path: 'customer', select: 'name email phone avatarUrl address status createdAt' },
       { path: 'supplier', select: 'name email phone' }
     ]);
 
@@ -655,7 +700,7 @@ exports.cancelOrder = async (req, res, next) => {
     });
 
     order = await order.populate([
-      { path: 'customer', select: 'name email phone avatarUrl address' },
+      { path: 'customer', select: 'name email phone avatarUrl address status createdAt' },
       { path: 'supplier', select: 'name email phone' }
     ]);
 

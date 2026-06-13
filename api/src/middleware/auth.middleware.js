@@ -26,15 +26,26 @@ const protect = async (req, res, next) => {
     // Verify token
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
 
-    // Get user from database
-    const user = await User.findById(decoded.id);
+    // Get user from database — exclude soft-deleted users
+    const user = await User.findOne({ _id: decoded.id, deletedAt: null });
 
     if (!user) {
       const log = req.logger || require('../utils/logger');
-      log.warn({ decodedId: decoded.id }, '[AUTH] Rejected — user no longer exists in database');
+      log.warn({ decodedId: decoded.id }, '[AUTH] Rejected — user no longer exists or was deleted');
       return res.status(401).json({
         success: false,
         error: 'The user belonging to this token no longer exists.',
+        timestamp: new Date().toISOString()
+      });
+    }
+
+    // Validate JWT role matches current DB role (detect stale/tampered tokens)
+    if (decoded.role && decoded.role !== user.role) {
+      const log = req.logger || require('../utils/logger');
+      log.warn({ userId: user._id, tokenRole: decoded.role, dbRole: user.role }, '[AUTH] Rejected — token role mismatch (stale token)');
+      return res.status(401).json({
+        success: false,
+        error: 'Your session is outdated. Please log in again.',
         timestamp: new Date().toISOString()
       });
     }
