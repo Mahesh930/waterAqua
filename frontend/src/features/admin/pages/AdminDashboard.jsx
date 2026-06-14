@@ -1,5 +1,5 @@
 import React from "react";
-import { LayoutDashboard, Users, Package, BarChart3, IndianRupee, Truck, Clock } from "lucide-react";
+import { LayoutDashboard, Users, Package, BarChart3, IndianRupee, Truck, Clock, User } from "lucide-react";
 import DashboardLayout from "@/shared/components/DashboardLayout";
 import { Routes, Route } from "react-router-dom";
 import AdminOverview from "./AdminOverview";
@@ -9,6 +9,7 @@ import AdminAnalytics from "./AdminAnalytics";
 import AdminCommissions from "./AdminCommissions";
 import AdminSuppliers from "./AdminSuppliers";
 import AdminAuditLogs from "./AuditLogs";
+import AdminProfile from "./AdminProfile";
 
 const navItems = [
   { label: "Overview", path: "/admin", icon: <LayoutDashboard className="h-4 w-4" /> },
@@ -18,6 +19,7 @@ const navItems = [
   { label: "Users", path: "/admin/users", icon: <Users className="h-4 w-4" /> },
   { label: "Logs", path: "/admin/logs", icon: <Clock className="h-4 w-4" /> },
   { label: "Analytics", path: "/admin/analytics", icon: <BarChart3 className="h-4 w-4" /> },
+  { label: "Profile", path: "/admin/profile", icon: <User className="h-4 w-4" /> },
 ];
 
 export default function AdminDashboard() {
@@ -31,6 +33,7 @@ export default function AdminDashboard() {
         <Route path="analytics" element={<AdminAnalytics />} />
         <Route path="commission" element={<AdminCommissions />} />
         <Route path="logs" element={<AdminAuditLogs />} />
+        <Route path="profile" element={<AdminProfile />} />
       </Routes>
     </DashboardLayout>
   );
