@@ -19,6 +19,7 @@ router.get('/:id', getProductById);
 const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
+const { uploadToCloudinary } = require('../utils/cloudinary');
 
 // Configure Multer storage
 const storage = multer.diskStorage({
@@ -49,7 +50,7 @@ const upload = multer({
 
 // Upload endpoint
 router.post('/upload', protect, restrictTo('supplier', 'admin'), (req, res, next) => {
-  upload.single('image')(req, res, (err) => {
+  upload.single('image')(req, res, async (err) => {
     if (err instanceof multer.MulterError) {
       return res.status(400).json({ success: false, error: `Upload error: ${err.message}` });
     } else if (err) {
@@ -60,8 +61,24 @@ router.post('/upload', protect, restrictTo('supplier', 'admin'), (req, res, next
       return res.status(400).json({ success: false, error: 'Please select an image file to upload' });
     }
     
-    const fileUrl = `${req.protocol}://${req.get('host')}/uploads/${req.file.filename}`;
-    res.success({ url: fileUrl });
+    try {
+      const fileUrl = await uploadToCloudinary(req.file.path);
+      
+      fs.unlink(req.file.path, (unlinkErr) => {
+        if (unlinkErr) {
+          console.error(`Failed to delete temp file at ${req.file.path}:`, unlinkErr);
+        }
+      });
+      
+      res.success({ url: fileUrl });
+    } catch (uploadErr) {
+      fs.unlink(req.file.path, (unlinkErr) => {
+        if (unlinkErr) {
+          console.error(`Failed to delete temp file at ${req.file.path} after upload error:`, unlinkErr);
+        }
+      });
+      return res.status(500).json({ success: false, error: `Cloudinary upload failed: ${uploadErr.message}` });
+    }
   });
 });
 

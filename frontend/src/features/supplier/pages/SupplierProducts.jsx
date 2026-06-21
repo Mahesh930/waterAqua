@@ -303,7 +303,7 @@ export default function SupplierProducts() {
                           <img 
                             src={form.imageUrl} 
                             alt="Preview" 
-                            className="h-full w-full object-cover group-hover:scale-105 transition-transform duration-300"
+                            className="h-full max-w-full object-contain group-hover:scale-105 transition-transform duration-300 p-1"
                           />
                           <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity gap-2">
                             <button
@@ -416,15 +416,23 @@ export default function SupplierProducts() {
               className="bg-[#0e142e]/80 border border-white/5 rounded-2xl overflow-hidden group shadow-lg"
             >
               {/* Product Media */}
-              <div className="relative h-40 bg-[#090d22] flex items-center justify-center border-b border-white/5">
+              <div className="relative h-40 bg-[#090d22] flex items-center justify-center border-b border-white/5 p-2">
                 <img 
                   src={p.imageUrl || "https://images.unsplash.com/photo-1548839140-29a749e1cf4d?q=80&w=300&auto=format&fit=crop"} 
                   alt={p.name} 
-                  className="h-full w-full object-cover group-hover:scale-105 transition-transform duration-500" 
+                  className="h-full max-w-full object-contain group-hover:scale-105 transition-transform duration-500" 
                 />
-                <Badge className="absolute top-2 left-2 bg-[#0e142e] border-white/5 text-[10px] font-bold px-2 py-0.5 rounded-md">
-                  {p.capacityLiters} Liters
-                </Badge>
+               <Badge
+  variant="outline"
+  className="
+    absolute top-2 left-2
+    bg-white text-slate-900 border-slate-300
+    dark:bg-slate-950 dark:text-white dark:border-white/10
+    text-[10px] font-bold px-2 py-0.5 rounded-md shadow-sm
+  "
+>
+  {p.capacityLiters}L
+</Badge>
                 {!p.isActive && (
                   <Badge className="absolute top-2 right-2 bg-red-500/10 border border-red-500/15 text-red-400 text-[10px] font-bold rounded-md">
                     INACTIVE

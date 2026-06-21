@@ -1,4 +1,12 @@
-const requiredEnv = ['JWT_SECRET', 'MONGODB_URI', 'RAZORPAY_KEY_ID', 'RAZORPAY_KEY_SECRET'];
+const requiredEnv = [
+  'JWT_SECRET',
+  'MONGODB_URI',
+  'RAZORPAY_KEY_ID',
+  'RAZORPAY_KEY_SECRET',
+  'CLOUDINARY_CLOUD_NAME',
+  'CLOUDINARY_API_KEY',
+  'CLOUDINARY_API_SECRET'
+];
 
 module.exports = () => {
   const missing = [];

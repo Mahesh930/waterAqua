@@ -72,8 +72,8 @@ export default function ProductCatalog() {
           <div>
             <h1 className="text-3xl font-black text-white tracking-tight">Water Catalog</h1>
             <p className="text-slate-400 text-sm mt-0.5">
-              {user?.pincode 
-                ? `Browsing pure hydration packs servicing your pincode (${user.pincode})` 
+              {user?.pincode
+                ? `Browsing pure hydration packs servicing your pincode (${user.pincode})`
                 : "Browse pure hydration packs from local verified suppliers."
               }
             </p>
@@ -85,11 +85,11 @@ export default function ProductCatalog() {
       <div className="p-4 bg-[#0e142e]/60 border border-white/5 rounded-2xl shadow-lg flex flex-col md:flex-row gap-4 items-center">
         <div className="relative flex-1 w-full">
           <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-500" />
-          <Input 
-            placeholder="Search catalog products..." 
-            value={search} 
-            onChange={e => setSearch(e.target.value)} 
-            className="pl-10 rounded-xl h-11 bg-[#090d22] border-white/5 text-white placeholder-slate-600 focus-visible:ring-blue-500" 
+          <Input
+            placeholder="Search catalog products..."
+            value={search}
+            onChange={e => setSearch(e.target.value)}
+            className="pl-10 rounded-xl h-11 bg-[#090d22] border-white/5 text-white placeholder-slate-600 focus-visible:ring-blue-500"
           />
         </div>
         <div className="flex gap-2 overflow-x-auto w-full md:w-auto scrollbar-hide py-1">
@@ -99,11 +99,10 @@ export default function ProductCatalog() {
               <button
                 key={c.key}
                 onClick={() => setCategory(c.key)}
-                className={`px-4 py-2.5 rounded-xl text-xs font-semibold whitespace-nowrap transition-all ${
-                  active
-                    ? "bg-blue-600 text-white shadow-md shadow-blue-600/10"
-                    : "bg-[#0e142e] border border-white/5 text-slate-400 hover:text-white"
-                }`}
+                className={`px-4 py-2.5 rounded-xl text-xs font-semibold whitespace-nowrap transition-all ${active
+                  ? "bg-blue-600 text-white shadow-md shadow-blue-600/10"
+                  : "bg-[#0e142e] border border-white/5 text-slate-400 hover:text-white"
+                  }`}
               >
                 {c.label}
               </button>
@@ -136,20 +135,28 @@ export default function ProductCatalog() {
       ) : (
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-5">
           {filteredProducts.map(p => (
-            <motion.div 
+            <motion.div
               key={p.id || p._id}
               whileHover={{ y: -3 }}
               className="bg-[#0e142e]/80 border border-white/5 rounded-2xl overflow-hidden shadow-lg hover:shadow-2xl hover:border-blue-500/15 flex flex-col transition-all duration-300 group"
             >
               {/* Product Media */}
-              <div className="relative h-40 bg-[#090d22] flex items-center justify-center overflow-hidden border-b border-white/5">
-                <img 
-                  src={p.imageUrl || "https://images.unsplash.com/photo-1548839140-29a749e1cf4d?q=80&w=300&auto=format&fit=crop"} 
-                  alt={p.name} 
-                  className="h-full w-full object-cover group-hover:scale-105 transition-transform duration-500" 
+              <div className="relative h-40 bg-[#090d22] flex items-center justify-center overflow-hidden border-b border-white/5 p-2">
+                <img
+                  src={p.imageUrl || "https://images.unsplash.com/photo-1548839140-29a749e1cf4d?q=80&w=300&auto=format&fit=crop"}
+                  alt={p.name}
+                  className="h-full max-w-full object-contain group-hover:scale-105 transition-transform duration-500"
                 />
-                <Badge className="absolute top-2 left-2 bg-[#0e142e] border border-white/5 text-[9px] font-bold px-2 py-0.5 rounded-md">
-                  {p.capacityLiters} Liters
+                <Badge
+                  variant="outline"
+                  className="
+    absolute top-2 left-2
+    bg-white text-slate-900 border-slate-300
+    dark:bg-slate-950 dark:text-white dark:border-white/10
+    text-[10px] font-bold px-2 py-0.5 rounded-md shadow-sm
+  "
+                >
+                  {p.capacityLiters}L
                 </Badge>
                 <Badge className="absolute top-2 right-2 bg-emerald-500/10 border border-emerald-500/15 text-emerald-400 text-[9px] font-bold px-2 py-0.5 rounded-md">
                   {p.stock} In Stock

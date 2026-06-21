@@ -7,13 +7,18 @@ const { logAudit } = require('../utils/auditLogger');
 const paginate = require('../utils/pagination');
 
 // Automatically clean up (hard-delete) any old soft-deleted users on boot
-User.deleteMany({ deletedAt: { $ne: null } })
-  .then(result => {
-    if (result.deletedCount > 0) {
-      console.log(`Successfully hard-deleted ${result.deletedCount} old soft-deleted users.`);
-    }
-  })
-  .catch(err => console.error('Error hard-deleting old soft-deleted users:', err));
+if (User && typeof User.deleteMany === 'function') {
+  const deletePromise = User.deleteMany({ deletedAt: { $ne: null } });
+  if (deletePromise && typeof deletePromise.then === 'function') {
+    deletePromise
+      .then(result => {
+        if (result && result.deletedCount > 0) {
+          console.log(`Successfully hard-deleted ${result.deletedCount} old soft-deleted users.`);
+        }
+      })
+      .catch(err => console.error('Error hard-deleting old soft-deleted users:', err));
+  }
+}
 
 // @desc    Get dashboard metrics overview
 // @route   GET /api/v1/admin/overview
