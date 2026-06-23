@@ -1,316 +1,280 @@
 import React, { useState } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { useDispatch } from "react-redux";
-import { Droplets, Mail, Lock, Eye, EyeOff, User, Phone, MapPin, Gift, Truck } from "lucide-react";
+import { Droplets, Mail, Lock, Eye, EyeOff, User, Phone, MapPin, Gift, Truck, Shield, Star, CreditCard } from "lucide-react";
 import { Button } from "@/ui/button";
 import { Input } from "@/ui/input";
 import { Label } from "@/ui/label";
 import { useToast } from "@/shared/hooks/use-toast";
 import { useRegisterMutation } from "@/store/api";
 import { setCredentials } from "@/store/authSlice";
+import Navbar from "@/shared/components/Navbar";
+
+const brandFeatures = [
+  { icon: Shield,     title: "Verified Suppliers",  desc: "All distributors hygiene & quality certified" },
+  { icon: CreditCard, title: "Secure Payments",     desc: "COD and online options available" },
+  { icon: Star,       title: "Ratings & Reviews",   desc: "Rate and review every delivery" },
+];
 
 export default function Register() {
   const [searchParams] = useSearchParams();
   const initialRole = searchParams.get("role") === "supplier" ? "supplier" : "customer";
-  
-  const [role, setRole] = useState(initialRole);
-  const [name, setName] = useState("");
+
+  const [role, setRole]               = useState(initialRole);
+  const [name, setName]               = useState("");
   const [businessName, setBusinessName] = useState("");
   const [referralInput, setReferralInput] = useState("");
-  const [phone, setPhone] = useState("");
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [address, setAddress] = useState("");
-  const [pincode, setPincode] = useState("");
-  const [showPw, setShowPw] = useState(false);
-  const navigate = useNavigate();
-  const dispatch = useDispatch();
-  const { toast } = useToast();
+  const [phone, setPhone]             = useState("");
+  const [email, setEmail]             = useState("");
+  const [password, setPassword]       = useState("");
+  const [address, setAddress]         = useState("");
+  const [pincode, setPincode]         = useState("");
+  const [showPw, setShowPw]           = useState(false);
 
+  const navigate  = useNavigate();
+  const dispatch  = useDispatch();
+  const { toast } = useToast();
   const [register, { isLoading }] = useRegisterMutation();
 
   const handleRegister = async (e) => {
     e.preventDefault();
-
-    // Email format validation (client-side)
     const emailRegex = /^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$/;
     if (!emailRegex.test(email.trim())) {
-      toast({
-        title: "Invalid Email",
-        description: "Please provide a valid email address (e.g. you@example.com).",
-        variant: "destructive"
-      });
-      return;
+      toast({ title: "Invalid Email", description: "e.g. you@example.com", variant: "destructive" }); return;
     }
-
-    // Phone number validation (must be exactly 10 digits)
     const phoneClean = phone.replace(/\D/g, "");
     if (phoneClean.length !== 10) {
-      toast({
-        title: "Invalid Phone Number",
-        description: "Please enter a valid 10-digit phone number.",
-        variant: "destructive"
-      });
-      return;
+      toast({ title: "Invalid Phone", description: "Enter a valid 10-digit number.", variant: "destructive" }); return;
     }
-
-    // Password policy validation
     const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).{8,}$/;
     if (!passwordRegex.test(password)) {
-      toast({ 
-        title: "Weak Password", 
-        description: "Password must be at least 8 characters long and include at least 1 uppercase letter, 1 lowercase letter, and 1 number.", 
-        variant: "destructive" 
-      });
-      return;
+      toast({ title: "Weak Password", description: "Min 8 chars, 1 uppercase, 1 lowercase, 1 number.", variant: "destructive" }); return;
     }
-
     if (!pincode || pincode.length !== 6) {
-      toast({
-        title: "Invalid Pincode",
-        description: "Please enter a valid 6-digit postal pincode for deliveries.",
-        variant: "destructive"
-      });
-      return;
+      toast({ title: "Invalid Pincode", description: "6-digit postal code required.", variant: "destructive" }); return;
     }
-
     try {
       const payload = {
-        name: name.trim(),
-        email: email.trim().toLowerCase(),
-        password,
-        phone: phoneClean,
-        role,
-        pincode,
-        address,
+        name: name.trim(), email: email.trim().toLowerCase(), password,
+        phone: phoneClean, role, pincode, address,
         businessName: role === "supplier" ? businessName : undefined,
-        referredByCode: referralInput || undefined
+        referredByCode: referralInput || undefined,
       };
-
-      const result = await register(payload).unwrap();
-      const { token, user } = result;
+      const { token, user } = await register(payload).unwrap();
       dispatch(setCredentials({ token, user }));
-
-      toast({ 
-        title: "Account created!", 
-        description: `Registered successfully as a ${user.role}.` 
-      });
-
+      toast({ title: "Account created!", description: `Registered as ${user.role}.` });
       if (user.role === "customer") navigate("/customer");
       else if (user.role === "supplier") navigate("/supplier");
-      else if (user.role === "admin") navigate("/admin");
+      else navigate("/admin");
     } catch (error) {
-      console.error("[Register] Failed:", error?.data?.error || error?.message || error);
-      // Handle Zod validation error arrays from backend
-      let errMsg = "Registration failed. Please check your inputs.";
+      let errMsg = "Registration failed. Check your inputs.";
       const errData = error?.data?.error;
-      if (Array.isArray(errData)) {
-        errMsg = errData.map(e => e.message).join(". ");
-      } else if (typeof errData === "string") {
-        errMsg = errData;
-      } else if (error?.message) {
-        errMsg = error.message;
-      }
-      toast({ 
-        title: "Registration failed", 
-        description: errMsg, 
-        variant: "destructive" 
-      });
+      if (Array.isArray(errData)) errMsg = errData.map(e => e.message).join(". ");
+      else if (typeof errData === "string") errMsg = errData;
+      else if (error?.message) errMsg = error.message;
+      toast({ title: "Registration failed", description: errMsg, variant: "destructive" });
     }
   };
 
   return (
-    <div className="min-h-screen bg-[#070b19] flex items-center justify-center p-4 relative overflow-y-auto overflow-x-hidden text-slate-100">
-      {/* Background gradients */}
-      <div className="absolute top-20 right-20 w-72 h-72 bg-blue-500/10 rounded-full blur-3xl -z-10" />
-      <div className="absolute bottom-20 left-20 w-96 h-96 bg-teal-500/10 rounded-full blur-3xl -z-10" />
+    <div className="h-screen text-foreground overflow-hidden relative">
+      {/* Background image */}
+      <div className="absolute inset-0 z-0">
+        <img src="/stats-bg.png" alt="" className="w-full h-full object-cover object-center" />
+        <div className="absolute inset-0 dark:hidden"       style={{ background: "rgba(255,255,255,0.48)" }} />
+        <div className="absolute inset-0 hidden dark:block" style={{ background: "rgba(7,11,25,0.72)" }} />
+      </div>
 
-      <div className="w-full max-w-md relative z-10 my-8">
-        <div className="bg-[#0e142e]/80 border border-white/5 shadow-2xl rounded-3xl p-8 backdrop-blur-md">
-          <Link to="/" className="flex items-center gap-2.5 mb-6 justify-center group">
-            <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-blue-500 to-sky-400 flex items-center justify-center shadow-lg shadow-blue-500/20 group-hover:scale-105 transition-transform duration-300">
-              <Droplets className="h-5 w-5 text-white" />
+      <div className="relative z-10 h-full">
+        <Navbar />
+
+        <div className="pt-16 h-full flex">
+
+          {/* ── Left Brand Panel ──────────────────────────────── */}
+          <div className="hidden lg:flex lg:w-4/12 relative flex-col justify-center px-12 xl:px-16 overflow-hidden">
+            <div className="absolute inset-0 bg-gradient-to-br from-blue-700 via-blue-600 to-sky-500 opacity-95 backdrop-blur-sm" />
+            <div className="absolute -bottom-16 -right-16 w-64 h-64 bg-white/5 rounded-full" />
+            <div className="absolute top-12 -right-8 w-32 h-32 bg-white/5 rounded-full" />
+
+            <div className="relative z-10">
+              <div className="flex items-center gap-2.5 mb-8">
+                <div className="h-10 w-10 rounded-xl bg-white/20 flex items-center justify-center shadow-inner">
+                  <Droplets className="h-5 w-5 text-white" />
+                </div>
+                <span className="font-heading font-bold text-xl text-white">AquaHome</span>
+              </div>
+
+              <h2 className="text-3xl xl:text-4xl font-heading font-bold text-white leading-tight mb-3">
+                {role === "supplier"
+                  ? "Scale your water supply network."
+                  : "Fresh hydration, delivered fast."}
+              </h2>
+              <p className="text-blue-100 leading-relaxed mb-8 text-sm">
+                {role === "supplier"
+                  ? "Connect with thousands of active households, manage deliveries effortlessly, and grow your local route business."
+                  : "Join today to browse verified local suppliers, place instant repeat orders, and track deliveries with secure OTP validation."}
+              </p>
+
+              {/* Feature cards */}
+              <div className="space-y-3">
+                {brandFeatures.map((f) => (
+                  <div key={f.title}
+                    className="flex items-center gap-4 p-3.5 rounded-xl bg-white/10 border border-white/15 backdrop-blur-sm hover:bg-white/15 transition-colors duration-200"
+                  >
+                    <div className="h-9 w-9 rounded-lg bg-white/15 flex items-center justify-center shrink-0 shadow-inner">
+                      <f.icon className="h-4 w-4 text-white" />
+                    </div>
+                    <div>
+                      <p className="text-white font-semibold text-sm">{f.title}</p>
+                      <p className="text-blue-200 text-xs">{f.desc}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
             </div>
-            <span className="font-bold text-xl tracking-wide bg-gradient-to-r from-white via-slate-100 to-blue-200 bg-clip-text text-transparent">
-              AquaHome
-            </span>
-          </Link>
-
-          <h2 className="text-2xl font-bold mb-1 text-center text-white">Create Account</h2>
-          <p className="text-slate-400 text-sm mb-5 text-center">Sign up to order or distribute water cans.</p>
-
-          <div className="flex gap-1 p-1 rounded-xl bg-[#090d22] mb-5 border border-white/5">
-            {[
-              { r: "customer", label: "🚰 Customer" },
-              { r: "supplier", label: "🚛 Supplier" }
-            ].map(item => (
-              <button 
-                key={item.r} 
-                type="button"
-                onClick={() => setRole(item.r)}
-                className={`flex-1 text-sm py-2.5 rounded-lg font-semibold transition-all duration-200 ${
-                  role === item.r 
-                    ? "bg-blue-600 text-white shadow-md shadow-blue-600/10" 
-                    : "text-slate-400 hover:text-white"
-                }`}
-              >
-                {item.label}
-              </button>
-            ))}
           </div>
 
-          <form onSubmit={handleRegister} className="space-y-4">
-            <div>
-              <Label htmlFor="name" className="text-slate-300">{role === "supplier" ? "Contact Person Name" : "Full Name"}</Label>
-              <div className="relative mt-1">
-                <User className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-500" />
-                <Input 
-                  id="name" 
-                  placeholder={role === "supplier" ? "Ramesh Ganga" : "John Doe"} 
-                  className="pl-10 rounded-xl bg-[#090d22] border-white/5 text-white placeholder-slate-600 focus-visible:ring-blue-500" 
-                  value={name} 
-                  onChange={e => setName(e.target.value)} 
-                  required 
-                />
-              </div>
-            </div>
-
-            {role === "supplier" && (
+          {/* ── Right Form Panel ──────────────────────────────── */}
+          <div className="flex-1 flex items-center justify-center px-6 overflow-hidden">
+            {/* Frosted glass card — full-height layout, fits all items without scrollbar */}
+            <div className="w-full max-w-xl bg-white/95 dark:bg-slate-900/90 backdrop-blur-md rounded-2xl shadow-[0_20px_50px_rgba(8,112,184,0.12)] dark:shadow-[0_20px_50px_rgba(0,0,0,0.3)] border border-blue-100 dark:border-white/10 p-7 h-[calc(100vh-6.5rem)] flex flex-col justify-between overflow-hidden">
               <div>
-                <Label htmlFor="businessName" className="text-slate-300">Business Name</Label>
-                <div className="relative mt-1">
-                  <Truck className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-500" />
-                  <Input 
-                    id="businessName" 
-                    placeholder="Ganga Water Suppliers Ltd" 
-                    className="pl-10 rounded-xl bg-[#090d22] border-white/5 text-white placeholder-slate-600 focus-visible:ring-blue-500" 
-                    value={businessName} 
-                    onChange={e => setBusinessName(e.target.value)} 
-                    required 
-                  />
-                </div>
-              </div>
-            )}
+                <h2 className="text-2xl font-heading font-bold text-foreground tracking-tight">Create Account</h2>
+                <p className="text-muted-foreground text-xs mt-0.5 mb-4">Set up your profile to get started.</p>
 
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <Label htmlFor="phone" className="text-slate-300">Phone Number</Label>
-                <div className="relative mt-1">
-                  <Phone className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-500" />
-                  <Input 
-                    id="phone" 
-                    type="tel" 
-                    placeholder="9876543210" 
-                    maxLength={10}
-                    className="pl-10 rounded-xl bg-[#090d22] border-white/5 text-white placeholder-slate-600 focus-visible:ring-blue-500" 
-                    value={phone} 
-                    onChange={e => setPhone(e.target.value.replace(/\D/g, "").slice(0, 10))} 
-                    required 
-                  />
+                {/* Role Toggle */}
+                <div className="flex gap-1 p-1 rounded-lg bg-muted mb-4 border border-border">
+                  {[
+                    { r: "customer", label: "🚰 Customer Account" },
+                    { r: "supplier", label: "🚛 Supplier Partner" },
+                  ].map(item => (
+                    <button key={item.r} type="button" onClick={() => setRole(item.r)}
+                      className={`flex-1 text-xs py-2 rounded-md font-semibold transition-all duration-200 ${
+                        role === item.r ? "bg-blue-600 text-white shadow-sm" : "text-muted-foreground hover:text-foreground"
+                      }`}>
+                      {item.label}
+                    </button>
+                  ))}
                 </div>
-              </div>
-              <div>
-                <Label htmlFor="pincode" className="text-slate-300">Pincode (6-Digits)</Label>
-                <div className="relative mt-1">
-                  <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-500" />
-                  <Input 
-                    id="pincode" 
-                    placeholder="411001" 
-                    maxLength={6}
-                    className="pl-10 rounded-xl bg-[#090d22] border-white/5 text-white placeholder-slate-600 focus-visible:ring-blue-500" 
-                    value={pincode} 
-                    onChange={e => setPincode(e.target.value.replace(/\D/g, ""))} 
-                    required 
-                  />
-                </div>
-              </div>
-            </div>
 
-            <div>
-              <Label htmlFor="email" className="text-slate-300">Email Address</Label>
-              <div className="relative mt-1">
-                <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-500" />
-                <Input 
-                  id="email" 
-                  type="email" 
-                  placeholder="you@example.com" 
-                  className="pl-10 rounded-xl bg-[#090d22] border-white/5 text-white placeholder-slate-600 focus-visible:ring-blue-500" 
-                  value={email} 
-                  onChange={e => setEmail(e.target.value)} 
-                  required 
-                />
-              </div>
-            </div>
+                <form onSubmit={handleRegister} className="space-y-3.5">
+                  <div className="grid grid-cols-2 gap-x-4 gap-y-3.5">
+                    {/* Name */}
+                    <div>
+                      <Label htmlFor="name" className="text-foreground font-semibold text-xs">{role === "supplier" ? "Contact Person" : "Full Name"}</Label>
+                      <div className="relative mt-1">
+                        <User className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+                        <Input id="name" placeholder={role === "supplier" ? "Ramesh Ganga" : "John Doe"}
+                          className="pl-9 h-9 text-sm rounded-lg bg-background border-slate-200 dark:border-slate-800 focus-visible:ring-blue-500 shadow-sm"
+                          value={name} onChange={e => setName(e.target.value)} required />
+                      </div>
+                    </div>
 
-            <div>
-              <Label htmlFor="password" className="text-slate-300">Password</Label>
-              <div className="relative mt-1">
-                <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-500" />
-                <Input 
-                  id="password" 
-                  type={showPw ? "text" : "password"} 
-                  placeholder="••••••••" 
-                  className="pl-10 pr-10 rounded-xl bg-[#090d22] border-white/5 text-white placeholder-slate-600 focus-visible:ring-blue-500" 
-                  value={password} 
-                  onChange={e => setPassword(e.target.value)} 
-                  required 
-                />
-                <button 
-                  type="button" 
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-300" 
-                  onClick={() => setShowPw(!showPw)}
-                >
-                  {showPw ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                </button>
+                    {/* Phone */}
+                    <div>
+                      <Label htmlFor="phone" className="text-foreground font-semibold text-xs">Phone Number</Label>
+                      <div className="relative mt-1">
+                        <Phone className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+                        <Input id="phone" type="tel" placeholder="9876543210" maxLength={10}
+                          className="pl-9 h-9 text-sm rounded-lg bg-background border-slate-200 dark:border-slate-800 focus-visible:ring-blue-500 shadow-sm"
+                          value={phone} onChange={e => setPhone(e.target.value.replace(/\D/g, "").slice(0, 10))} required />
+                      </div>
+                    </div>
+
+                    {/* Email */}
+                    <div>
+                      <Label htmlFor="email" className="text-foreground font-semibold text-xs">Email Address</Label>
+                      <div className="relative mt-1">
+                        <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+                        <Input id="email" type="email" placeholder="you@example.com"
+                          className="pl-9 h-9 text-sm rounded-lg bg-background border-slate-200 dark:border-slate-800 focus-visible:ring-blue-500 shadow-sm"
+                          value={email} onChange={e => setEmail(e.target.value)} required />
+                      </div>
+                    </div>
+
+                    {/* Pincode */}
+                    <div>
+                      <Label htmlFor="pincode" className="text-foreground font-semibold text-xs">Pincode</Label>
+                      <div className="relative mt-1">
+                        <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+                        <Input id="pincode" placeholder="411001" maxLength={6}
+                          className="pl-9 h-9 text-sm rounded-lg bg-background border-slate-200 dark:border-slate-800 focus-visible:ring-blue-500 shadow-sm"
+                          value={pincode} onChange={e => setPincode(e.target.value.replace(/\D/g, ""))} required />
+                      </div>
+                    </div>
+
+                    {/* Password */}
+                    <div>
+                      <Label htmlFor="password" className="text-foreground font-semibold text-xs">Password</Label>
+                      <div className="relative mt-1">
+                        <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+                        <Input id="password" type={showPw ? "text" : "password"} placeholder="••••••••"
+                          className="pl-9 pr-9 h-9 text-sm rounded-lg bg-background border-slate-200 dark:border-slate-800 focus-visible:ring-blue-500 shadow-sm"
+                          value={password} onChange={e => setPassword(e.target.value)} required />
+                        <button type="button" onClick={() => setShowPw(!showPw)}
+                          className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors">
+                          {showPw ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Dynamic Field (Business Name or Referral Code) */}
+                    {role === "supplier" ? (
+                      <div>
+                        <Label htmlFor="businessName" className="text-foreground font-semibold text-xs">Business Name</Label>
+                        <div className="relative mt-1">
+                          <Truck className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+                          <Input id="businessName" placeholder="Ganga Water Suppliers Ltd"
+                            className="pl-9 h-9 text-sm rounded-lg bg-background border-slate-200 dark:border-slate-800 focus-visible:ring-blue-500 shadow-sm"
+                            value={businessName} onChange={e => setBusinessName(e.target.value)} required />
+                        </div>
+                      </div>
+                    ) : (
+                      <div>
+                        <Label htmlFor="referral" className="text-foreground font-semibold text-xs">
+                          Referral Code <span className="text-muted-foreground font-normal">(optional)</span>
+                        </Label>
+                        <div className="relative mt-1">
+                          <Gift className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+                          <Input id="referral" placeholder="AQUA1234"
+                            className="pl-9 h-9 text-sm rounded-lg bg-background border-slate-200 dark:border-slate-800 focus-visible:ring-blue-500 uppercase shadow-sm"
+                            value={referralInput} onChange={e => setReferralInput(e.target.value.toUpperCase())} />
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Address (spanning both columns) */}
+                    <div className="col-span-2">
+                      <Label htmlFor="address" className="text-foreground font-semibold text-xs">
+                        {role === "supplier" ? "Office/Warehouse Address" : "Delivery Address"}
+                      </Label>
+                      <div className="relative mt-1">
+                        <Input id="address" placeholder="Street details, building/apartment, city"
+                          className="h-9 text-sm rounded-lg bg-background border-slate-200 dark:border-slate-800 focus-visible:ring-blue-500 shadow-sm"
+                          value={address} onChange={e => setAddress(e.target.value)} required />
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Password / Referral helper texts as a single compact line */}
+                  <div className="flex justify-between items-center text-[10px] text-muted-foreground px-0.5 pt-0.5">
+                    <span>Min 8 chars, 1 uppercase, 1 lowercase, 1 number</span>
+                    {role === "customer" && <span>Referral earns ₹50 credit!</span>}
+                  </div>
+
+                  <Button type="submit" disabled={isLoading}
+                    className="w-full h-10 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-semibold text-sm border-0 shadow-md shadow-blue-500/10 hover:shadow-blue-500/20 active:scale-[0.99] transition-all duration-200 mt-2">
+                    {isLoading ? "Creating Account..." : "Create Account"}
+                  </Button>
+                </form>
               </div>
-              <p className="text-[10px] text-slate-500 mt-1 px-1">
-                Min. 8 characters, at least 1 uppercase, 1 lowercase, and 1 number
+
+              <p className="text-center text-xs text-muted-foreground mt-3">
+                Already have an account?{" "}
+                <Link to="/login" className="text-blue-600 dark:text-blue-400 font-semibold hover:underline">Log In</Link>
               </p>
             </div>
-
-            <div>
-              <Label htmlFor="address" className="text-slate-300">{role === "supplier" ? "Office/Warehouse Address" : "Delivery Address"}</Label>
-              <div className="relative mt-1">
-                <Input 
-                  id="address" 
-                  placeholder="Street details, apartment, city" 
-                  className="rounded-xl bg-[#090d22] border-white/5 text-white placeholder-slate-600 focus-visible:ring-blue-500" 
-                  value={address} 
-                  onChange={e => setAddress(e.target.value)} 
-                  required 
-                />
-              </div>
-            </div>
-
-            {role === "customer" && (
-              <div>
-                <Label htmlFor="referral" className="text-slate-300">Referral Code (optional)</Label>
-                <div className="relative mt-1">
-                  <Gift className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-500" />
-                  <Input 
-                    id="referral" 
-                    placeholder="AQUA1234" 
-                    className="pl-10 rounded-xl bg-[#090d22] border-white/5 text-white placeholder-slate-600 focus-visible:ring-blue-500 uppercase" 
-                    value={referralInput} 
-                    onChange={e => setReferralInput(e.target.value.toUpperCase())} 
-                  />
-                </div>
-                <p className="text-[10px] text-slate-500 mt-1">Both you and your referrer earn 50 Rs credit!</p>
-              </div>
-            )}
-
-            <Button 
-              type="submit" 
-              className="w-full py-6 rounded-xl bg-gradient-to-r from-blue-600 to-sky-500 hover:from-blue-500 hover:to-sky-400 text-white font-semibold shadow-lg shadow-blue-500/20 border-0 mt-6" 
-              disabled={isLoading}
-            >
-              {isLoading ? "Creating Account..." : "Create Account"}
-            </Button>
-          </form>
-
-          <p className="text-center text-sm text-slate-400 mt-5">
-            Already have an account? <Link to="/login" className="text-blue-400 font-semibold hover:underline">Log In</Link>
-          </p>
+          </div>
         </div>
       </div>
     </div>

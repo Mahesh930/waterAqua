@@ -41,9 +41,6 @@
     --warning: 38 92% 50%;
     --warning-foreground: 0 0% 100%;
 
-    --glass-bg: 0 0% 100% / 0.7;
-    --glass-border: 0 0% 100% / 0.3;
-
     --sidebar-background: 220 20% 97%;
     --sidebar-foreground: 220 25% 10%;
     --sidebar-primary: 210 100% 52%;
@@ -78,9 +75,6 @@
     --input: 222 20% 18%;
     --ring: 210 100% 52%;
 
-    --glass-bg: 222 40% 10% / 0.6;
-    --glass-border: 0 0% 100% / 0.08;
-
     --sidebar-background: 222 47% 6%;
     --sidebar-foreground: 210 40% 96%;
     --sidebar-primary: 210 100% 52%;
@@ -109,34 +103,12 @@
   .text-gradient {
     @apply bg-clip-text text-transparent bg-gradient-to-r from-primary to-accent;
   }
-  .glass {
-    background: hsl(var(--glass-bg));
-    backdrop-filter: blur(20px);
-    -webkit-backdrop-filter: blur(20px);
-    border: 1px solid hsl(var(--glass-border));
+  .scrollbar-hide {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
   }
-  .glass-card {
-    background: hsl(var(--glass-bg));
-    backdrop-filter: blur(16px);
-    -webkit-backdrop-filter: blur(16px);
-    border: 1px solid hsl(var(--glass-border));
-    box-shadow: 0 8px 32px 0 hsl(210 100% 52% / 0.06);
-    transition: box-shadow 0.3s ease, transform 0.2s ease;
-  }
-  .glass-card:hover {
-    box-shadow: 0 12px 40px 0 hsl(210 100% 52% / 0.1);
-  }
-  .glass-strong {
-    background: hsl(var(--glass-bg));
-    backdrop-filter: blur(40px);
-    -webkit-backdrop-filter: blur(40px);
-    border: 1px solid hsl(var(--glass-border));
-    box-shadow: 0 8px 32px 0 hsl(0 0% 0% / 0.08);
-  }
-  .shimmer {
-    background: linear-gradient(90deg, transparent, hsl(var(--primary) / 0.05), transparent);
-    background-size: 200% 100%;
-    animation: shimmer 2s infinite;
+  .scrollbar-hide::-webkit-scrollbar {
+    display: none;
   }
 }
 
@@ -146,12 +118,12 @@
 }
 
 /* ==========================================
-   ✨ ADAPTIVE THEME UTILITY OVERRIDES
-   Maps hardcoded dark colors dynamically to
-   theme tokens for flawless light & dark modes.
+   ADAPTIVE THEME UTILITY OVERRIDES
+   Maps hardcoded dark colors used in dashboard
+   pages to theme tokens for light & dark modes.
    ========================================== */
 
-/* Background Color Mappings */
+/* Background Color Mappings (used by Dashboard pages) */
 .bg-\[\#070b19\] {
   background-color: hsl(var(--background)) !important;
 }
@@ -168,7 +140,7 @@
   background-color: hsl(var(--muted)) !important;
 }
 
-/* Card Background Mappings */
+/* Card Background Mappings (used by Dashboard pages) */
 .bg-\[\#0e142e\] {
   background-color: hsl(var(--card)) !important;
 }
@@ -188,7 +160,7 @@
   background-color: hsla(var(--card) / 0.2) !important;
 }
 
-/* Input & Highlight Background Mappings */
+/* Input & Highlight Background Mappings (used by Dashboard pages) */
 .bg-\[\#090d22\] {
   background-color: hsl(var(--muted)) !important;
 }
@@ -210,15 +182,6 @@
   background-color: hsla(var(--muted) / 0.5) !important;
 }
 
-/* Border Color Mappings */
-.border-white\/5,
-.border-white\/10,
-.border-white\/15,
-.border-white\/20,
-.border-white\/25 {
-  border-color: hsl(var(--border)) !important;
-}
-
 /* Additional Background Color Mappings */
 .bg-\[\#0a0f24\] {
   background-color: hsl(var(--background)) !important;
@@ -230,7 +193,16 @@
   background-color: hsl(var(--card)) !important;
 }
 
-/* Text Color Contrast Mappings */
+/* Border Color Mappings (dashboard pages use these) */
+.border-white\/5,
+.border-white\/10,
+.border-white\/15,
+.border-white\/20,
+.border-white\/25 {
+  border-color: hsl(var(--border)) !important;
+}
+
+/* Text Color Contrast Mappings (dashboard pages use these) */
 .text-slate-100,
 .text-slate-200 {
   color: hsl(var(--foreground)) !important;
@@ -252,7 +224,7 @@
   --foreground: 220 25% 10%;
   --background: 220 20% 98%;
   
-  /* Make shadows richer in light mode */
+  /* Richer shadows in light mode */
   .shadow-lg {
     box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.05), 0 8px 10px -6px rgba(0, 0, 0, 0.05) !important;
   }
@@ -260,7 +232,7 @@
     box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.07) !important;
   }
 
-  /* Force solid cards in light mode instead of transparent white to avoid blending with background */
+  /* Force solid cards in light mode */
   .bg-\[\#0e142e\]\/80,
   .bg-\[\#0e142e\]\/60,
   .bg-\[\#0e142e\]\/50,
@@ -279,7 +251,7 @@
     background-color: hsl(var(--muted)) !important;
   }
 
-  /* Map transparent white backgrounds to muted gray in light mode */
+  /* Map transparent white backgrounds to muted */
   .bg-white\/5,
   .bg-white\/10 {
     background-color: hsl(var(--muted)) !important;
@@ -289,13 +261,7 @@
     background-color: hsl(var(--muted)) !important;
   }
 
-  /* Map logo gradient text under light mode to theme gradient */
-  .from-white.to-blue-200,
-  .from-white.via-slate-100.to-blue-200 {
-    background-image: linear-gradient(to right, hsl(var(--primary)), hsl(var(--accent))) !important;
-  }
-
-  /* High contrast equivalents for status colors and icons in light mode */
+  /* High contrast icon colors in light mode */
   .text-blue-400 { color: #1d4ed8 !important; }
   .text-emerald-400 { color: #047857 !important; }
   .text-amber-400 { color: #b45309 !important; }
@@ -304,11 +270,11 @@
   .text-rose-400 { color: #be123c !important; }
   .text-teal-400 { color: #0f766e !important; }
 
-  /* Map white text to foreground globally except when on colored backgrounds */
+  /* Map white text to foreground in light mode */
   .text-white {
     color: hsl(var(--foreground)) !important;
   }
-  /* Restore pure white text for buttons, badges, gradients, and specific colored containers */
+  /* Restore pure white text for elements on colored backgrounds */
   button.text-white,
   a.text-white,
   .text-white-force,
@@ -327,7 +293,7 @@
     color: #ffffff !important;
   }
 
-  /* Adjust transparent text opacities in light mode for proper contrast */
+  /* Adjust transparent text opacities in light mode */
   .text-white\/80 {
     color: hsla(var(--foreground) / 0.8) !important;
   }
@@ -335,7 +301,7 @@
     color: hsla(var(--foreground) / 0.6) !important;
   }
 
-  /* Make outline and secondary buttons look amazing on hover in light mode */
+  /* Dashboard hover states in light mode */
   .bg-\[\#0e142e\]:hover,
   .bg-\[\#090d22\]:hover,
   .bg-white\/5:hover,
@@ -351,7 +317,6 @@
     color: hsl(var(--foreground)) !important;
   }
 
-  /* Target any hover:text-white on standard light background buttons to ensure it stays dark */
   button.bg-\[\#0e142e\].hover\:text-white:hover,
   button.bg-\[\#090d22\].hover\:text-white:hover,
   button.bg-white\/5.hover\:text-white:hover,
@@ -361,4 +326,3 @@
     color: hsl(var(--foreground)) !important;
   }
 }
-
